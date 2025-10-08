@@ -63,3 +63,9 @@ chrome.debugger.onDetach.addListener((source, reason) => {
     reportError("background-worker", error as Error, { reason });
   }
 });
+
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.id) {
+    void chrome.sidePanel.open({ windowId: tab.windowId });
+  }
+});
