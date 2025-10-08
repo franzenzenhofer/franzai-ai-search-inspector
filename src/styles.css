@@ -16,6 +16,8 @@
   background: var(--dt-bg-medium);
   border-bottom: 1px solid var(--dt-border);
   flex-shrink: 0;
+  flex-wrap: wrap;
+  min-height: 32px;
 }
 
 .btn {
@@ -25,6 +27,9 @@
   border: 1px solid var(--dt-border);
   border-radius: var(--dt-border-radius);
   transition: background var(--dt-transition);
+  white-space: nowrap;
+  font-size: 11px;
+  min-height: 24px;
 }
 
 .btn:hover {
@@ -43,6 +48,37 @@
 
 .btn.primary:hover {
   opacity: 0.9;
+}
+
+.mono {
+  font-family: var(--dt-font-mono);
+}
+
+.small {
+  font-size: 11px;
+  color: var(--dt-text-secondary);
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--dt-bg-medium);
+  border: 1px solid var(--dt-border);
+  border-radius: 3px;
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+.badge.warn {
+  background: var(--dt-warning);
+  border-color: var(--dt-warning);
+  color: white;
+}
+
+.empty {
+  padding: var(--dt-spacing-lg);
+  text-align: center;
+  color: var(--dt-text-secondary);
 }
 
 .table-container {

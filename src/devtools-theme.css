@@ -1,17 +1,17 @@
-/* Chrome DevTools Design System - Exact Color Palette */
+/* Chrome DevTools Design System - LIGHT THEME (Day Scheme) */
 :root {
-  --dt-bg-dark: #242424;
-  --dt-bg-medium: #2d2d2d;
-  --dt-bg-light: #1e1e1e;
-  --dt-text-primary: #cccccc;
-  --dt-text-secondary: #969696;
+  --dt-bg-dark: #ffffff;
+  --dt-bg-medium: #f3f3f3;
+  --dt-bg-light: #f9f9f9;
+  --dt-text-primary: #1a1a1a;
+  --dt-text-secondary: #5f6368;
   --dt-accent-blue: #1a73e8;
-  --dt-border: #3e3e3e;
-  --dt-error: #f48771;
-  --dt-warning: #e8b931;
-  --dt-success: #5bb974;
-  --dt-hover: rgba(255, 255, 255, 0.08);
-  --dt-selected: rgba(26, 115, 232, 0.2);
+  --dt-border: #dadce0;
+  --dt-error: #d93025;
+  --dt-warning: #f9ab00;
+  --dt-success: #188038;
+  --dt-hover: rgba(0, 0, 0, 0.04);
+  --dt-selected: rgba(26, 115, 232, 0.1);
   --dt-focus-ring: rgba(26, 115, 232, 0.4);
   --dt-font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --dt-font-mono: 'Roboto Mono', 'Menlo', 'Monaco', 'Courier New', monospace;

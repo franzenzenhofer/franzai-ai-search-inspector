@@ -37,9 +37,9 @@ describe("App components", () => {
 });
 
 describe("App secret toggle", () => {
-  it("renders SecretToggle component", () => {
+  it("renders SecretToggle component with Hide Secrets by default", () => {
     render(<App />);
-    expect(screen.getByText("Show Secrets")).toBeInTheDocument();
+    expect(screen.getByText("Hide Secrets")).toBeInTheDocument();
   });
 });
 

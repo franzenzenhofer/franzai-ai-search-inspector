@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCapture } from "./hooks/useCapture";
 import { useStreamListener } from "./hooks/useStreamListener";
 import { exportToJson } from "./lib/streamClassifier";
@@ -9,12 +9,10 @@ export function App(): JSX.Element {
   const { capturing, start, stop } = useCapture();
   const [rows, setRows] = useState<UiStreamRow[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [visibility, setVisibility] = useState<SecretVisibility>("masked");
+  const [visibility, setVisibility] = useState<SecretVisibility>("visible");
   useStreamListener(setRows);
+  useEffect(() => { void start(); }, [start]);
 
-  const clear = (): void => { setRows([]); setSelectedIndex(null); };
-  const toggle = (): void => setVisibility((v) => v === "masked" ? "visible" : "masked");
   const selected = selectedIndex !== null ? rows[selectedIndex] ?? null : null;
-
-  return <AppLayout capturing={capturing} onStart={() => void start()} onStop={() => void stop()} onClear={clear} onExport={() => exportToJson(rows)} visibility={visibility} onToggle={toggle} rows={rows} selectedIndex={selectedIndex} onSelect={setSelectedIndex} selectedStream={selected} />;
+  return <AppLayout capturing={capturing} onStart={() => void start()} onStop={() => void stop()} onClear={() => { setRows([]); setSelectedIndex(null); }} onToggle={() => setVisibility((v) => v === "masked" ? "visible" : "masked")} onCopyReport={() => void navigator.clipboard.writeText(JSON.stringify(rows, null, 2))} onExport={() => exportToJson(rows)} visibility={visibility} rows={rows} selectedIndex={selectedIndex} onSelect={setSelectedIndex} selectedStream={selected} />;
 }

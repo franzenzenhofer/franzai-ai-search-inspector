@@ -11,6 +11,7 @@ interface AppLayoutProps {
   onStop: () => void;
   onClear: () => void;
   onExport: () => void;
+  onCopyReport: () => void;
   visibility: SecretVisibility;
   onToggle: () => void;
   rows: UiStreamRow[];
@@ -23,7 +24,7 @@ export function AppLayout(props: AppLayoutProps): JSX.Element {
   return (
     <div className="app-container">
       <div className="toolbar">
-        <Controls capturing={props.capturing} onStart={props.onStart} onStop={props.onStop} onClear={props.onClear} onExport={props.onExport} />
+        <Controls capturing={props.capturing} onStart={props.onStart} onStop={props.onStop} onClear={props.onClear} onExport={props.onExport} onCopyReport={props.onCopyReport} />
         <SecretToggle visibility={props.visibility} onToggle={props.onToggle} />
       </div>
       <StreamTable rows={props.rows} selectedIndex={props.selectedIndex} onSelect={props.onSelect} />
