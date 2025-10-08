@@ -36,8 +36,10 @@ export default defineConfig({
         "**/dist/**",
         "**/tests/**",
         "src/background.ts",
+        "src/background/**",
         "src/sidepanel/**",
         "src/types.ts",
+        "src/types-search.ts",
         "src/errors/errorTypes.ts",
         "eslint.config.js"
       ]

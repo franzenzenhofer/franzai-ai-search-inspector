@@ -1,6 +1,7 @@
 import { reportError } from "@/errors/errorReporter";
 import { createDebuggerListener } from "@/background/handlers";
 import { handleMessage } from "@/background/messageHandler";
+import { setupAutoCapture } from "@/background/autoCapture";
 
 let currentTabId: number | null = null;
 let currentListener: ((source: chrome.debugger.Debuggee, method: string, params?: object) => void) | null = null;
@@ -65,7 +66,7 @@ chrome.debugger.onDetach.addListener((source, reason) => {
 });
 
 chrome.action.onClicked.addListener((tab) => {
-  if (tab.id) {
-    void chrome.sidePanel.open({ windowId: tab.windowId });
-  }
+  if (tab.id) void chrome.sidePanel.open({ windowId: tab.windowId });
 });
+
+setupAutoCapture(() => currentTabId, effectStartCapture);
