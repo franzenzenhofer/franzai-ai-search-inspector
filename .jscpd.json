@@ -1,0 +1,11 @@
+{
+  "threshold": 5,
+  "reporters": ["console"],
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/dist/**",
+    "**/node_modules/**"
+  ],
+  "format": ["typescript", "tsx"]
+}

@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "SSE Inspector (Side Panel)",
+  "version": "1.0.0",
+  "description": "Inspect and parse real SSE/JSONL responses from the current tab.",
+  "action": {
+    "default_title": "SSE Inspector"
+  },
+  "permissions": ["storage", "sidePanel", "debugger", "tabs"],
+  "host_permissions": [
+    "https://chat.openai.com/*",
+    "https://chatgpt.com/*",
+    "https://*.openai.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background.ts",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
+  "icons": {
+    "128": "icon128.png"
+  }
+}

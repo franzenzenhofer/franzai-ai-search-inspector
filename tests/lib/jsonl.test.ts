@@ -1,0 +1,27 @@
+import { beforeEach, expect, it } from "vitest";
+import { clearErrors, getErrors } from "@/errors/errorStore";
+import { parseJsonl } from "@/lib/jsonl";
+
+const mustExist = <T>(value: T | undefined): T => {
+  if (value === undefined) throw new Error("Expected value");
+  return value;
+};
+
+beforeEach(() => {
+  clearErrors();
+});
+
+it("parseJsonl returns parsed items for each non-empty line", () => {
+  const body = ['{"a":1}', "  ", 'invalid', '{"b":2}'].join("\n");
+  const parsed = parseJsonl("https://example.com", body);
+  expect(parsed.url).toBe("https://example.com");
+  expect(parsed.items).toHaveLength(3);
+  expect(mustExist(parsed.items.at(0)).parsed).toEqual({ a: 1 });
+  expect(mustExist(parsed.items.at(1)).parsed).toBeUndefined();
+  expect(mustExist(parsed.items.at(2)).parsed).toEqual({ b: 2 });
+});
+
+it("parseJsonl reports and rethrows errors", () => {
+  expect(() => parseJsonl("https://example.com", 123 as unknown as string)).toThrow();
+  expect(mustExist(getErrors().at(0)).source).toBe("parser-jsonl");
+});

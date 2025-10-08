@@ -45,7 +45,7 @@ async function effectFetchBody(requestId: string, url: string): Promise<void> {
   }
 }
 
-export function createDebuggerListener(tabId: number): (source: { tabId: number }, method: string, params?: unknown) => void {
+export function createDebuggerListener(tabId: number): (source: chrome.debugger.Debuggee, method: string, params?: object) => void {
   return (_source, method, params) => {
     try {
       if (_source.tabId !== tabId) return;
