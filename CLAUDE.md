@@ -63,9 +63,9 @@ npm run check-duplication  # Code duplication check (<5%)
 ## HARDCORE CONSTRAINTS - NON-NEGOTIABLE
 
 ### File Size
-- **75 lines maximum** per file (including imports, blank lines)
+- **75 lines maximum** per SOURCE CODE file WE WRITE (src/**/*.ts, src/**/*.tsx, tests/**/*.ts, tests/**/*.tsx)
 - **15 lines maximum** per function
-- **No exceptions** for source code files
+- **DOES NOT APPLY TO**: CSS files, HTML files, config files, specifications, generated files, third-party code
 - ESLint enforced - build fails if exceeded
 
 ### Test Coverage
@@ -243,6 +243,36 @@ See **CODE-REQUIREMENTS-BY-EXAMPLE.md** for all Chrome extension patterns.
 
 ---
 
+## DESIGN SYSTEM - CHROME DEVTOOLS ONLY
+
+### Visual Style
+- **Chrome DevTools aesthetic ONLY** - Professional, minimal, flat
+- **No emojis ANYWHERE** - Not in UI, code comments, error messages, or documentation
+- **Flat design** - No shadows, gradients, or 3D effects
+- **Compact layout** - Match DevTools density and spacing
+- **Monospace fonts** - For all code and data display
+
+### Color Palette
+- Use exact Chrome DevTools colors (dark theme)
+- Background: #242424, #2d2d2d, #1e1e1e
+- Text: #cccccc (primary), #969696 (secondary)
+- Accent: #1a73e8 (blue)
+- Success: #0f9d58, Warning: #f9ab00, Error: #d93025
+- Borders: #3e3e3e (subtle)
+
+### Typography
+- UI text: 12px Roboto/system-ui
+- Code text: 12px Roboto Mono/Menlo
+- Small text: 11px for labels and metadata
+
+### Components
+- Buttons: Flat, 1px border, no hover shadows
+- Tables: No cell borders, only row dividers
+- Badges: Inline, subtle background, 1px colored border
+- Cards: Minimal borders, no shadows
+
+---
+
 ## FORBIDDEN PRACTICES - AUTOMATIC REJECT
 
 **NEVER commit code that has**:
@@ -258,6 +288,7 @@ See **CODE-REQUIREMENTS-BY-EXAMPLE.md** for all Chrome extension patterns.
 - ❌ Commented-out code
 - ❌ `console.log` in production
 - ❌ TODO or FIXME comments
+- ❌ **Emojis anywhere** (UI, code, docs, errors)
 
 **Violation = COMMIT BLOCKED = PR REJECTED**
 
