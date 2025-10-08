@@ -7,14 +7,16 @@ interface Props {
   rows: UiStreamRow[];
 }
 
-function getExt(row: UiStreamRow): ExtractedData | undefined {
-  if (row.kind !== "jsonl") return undefined;
-  const item = row.parsed.items.find((it) => it.parsed?.extracted);
-  return item?.parsed?.extracted;
+function getAllExt(row: UiStreamRow): ExtractedData[] {
+  if (row.kind !== "jsonl") return [];
+  return row.parsed.items
+    .filter((it) => it.parsed?.extracted)
+    .map((it) => it.parsed?.extracted)
+    .filter((e): e is ExtractedData => !!e);
 }
 
 function aggregate(rows: UiStreamRow[]): ExtractedData {
-  const all = rows.map(getExt).filter((e): e is ExtractedData => !!e);
+  const all = rows.flatMap(getAllExt);
   const first = all.length > 0 ? all[0] : undefined;
   return {
     searchQueries: all.flatMap((e) => e.searchQueries),

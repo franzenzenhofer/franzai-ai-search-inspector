@@ -21,7 +21,9 @@ describe("extractQueries", () => {
   it("filters non-objects", () => {
     const obj = { search_model_queries: ["invalid", null, { query: "valid" }] };
     const result = extractQueries(obj);
-    expect(result).toHaveLength(1);
+    expect(result).toHaveLength(2);
+    expect(result.map((r) => r.query)).toContain("invalid");
+    expect(result.map((r) => r.query)).toContain("valid");
   });
 });
 
