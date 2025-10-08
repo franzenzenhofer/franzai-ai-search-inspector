@@ -1,7 +1,7 @@
 import type { UiStreamRow } from "@/types";
 import type { ExtractedData } from "@/lib/searchExtract";
-import { SearchResults } from "./SearchResults";
-import { SearchQueries } from "./SearchQueries";
+import { groupResultsByQuery } from "@/lib/queryGrouping";
+import { QueryResultView } from "./QueryResultView";
 
 interface Props {
   rows: UiStreamRow[];
@@ -45,11 +45,11 @@ export function GlobalSearchView({ rows }: Props): JSX.Element {
   const data = aggregate(rows);
   const qc = data.searchQueries.length;
   const rc = data.searchResults.reduce((sum, g) => sum + g.entries.length, 0);
+  const grouped = groupResultsByQuery(data.searchQueries, data.searchResults);
   return (
     <div className="global-search-view">
       <Header qc={qc} rc={rc} />
-      {qc > 0 && <SearchQueries queries={data.searchQueries} />}
-      {rc > 0 && <SearchResults groups={data.searchResults} />}
+      {grouped.map((g, i) => <QueryResultView key={i} data={g} />)}
     </div>
   );
 }

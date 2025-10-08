@@ -1,6 +1,6 @@
 {
   "name": "franzai-ai-search-inspector",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "Chrome side panel extension for inspecting real SSE and JSONL traffic.",
   "type": "module",

@@ -400,3 +400,31 @@
 .json-inspector-section[open] summary {
   border-bottom: 1px solid var(--dt-border);
 }
+
+.query-result-block {
+  margin-bottom: var(--dt-spacing-xl);
+  padding: var(--dt-spacing-lg);
+  background: var(--dt-bg-dark);
+  border: 1px solid var(--dt-border);
+  border-radius: var(--dt-border-radius);
+}
+
+.query-result-header {
+  margin-bottom: var(--dt-spacing-lg);
+  padding-bottom: var(--dt-spacing-md);
+  border-bottom: 2px solid var(--dt-accent-blue);
+}
+
+.query-text-large {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--dt-accent-blue);
+  margin-bottom: var(--dt-spacing-sm);
+  font-family: var(--dt-font-mono);
+}
+
+.query-meta {
+  display: flex;
+  gap: var(--dt-spacing-sm);
+  align-items: center;
+}
