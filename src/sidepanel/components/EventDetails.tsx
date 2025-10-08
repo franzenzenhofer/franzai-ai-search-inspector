@@ -1,62 +1,36 @@
 import type { UiStreamRow, SecretVisibility } from "@/types";
 import type { ExtractedData } from "@/lib/searchExtract";
 import { SseView } from "./SseView";
-import { SearchResults } from "./SearchResults";
-import { SearchQueries } from "./SearchQueries";
-import { MetadataDisplay } from "./MetadataDisplay";
+import { SearchDataDisplay } from "./SearchDataDisplay";
+import { JsonViewer } from "./JsonViewer";
 
 interface EventDetailsProps {
   stream: UiStreamRow | null;
   visibility: SecretVisibility;
 }
 
-function OtherView({ stream }: { stream: Extract<UiStreamRow, { kind: "other" }> }): JSX.Element {
-  return (
-    <div>
-      <h3>Other Response</h3>
-      <div className="small">{stream.url}</div>
-      <pre className="mono">{stream.note}</pre>
-    </div>
-  );
-}
-
-function JsonlRow({ line, idx }: { line: { line: string }; idx: number }): JSX.Element {
-  return (
-    <tr>
-      <td>{idx + 1}</td>
-      <td><pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{line.line}</pre></td>
-    </tr>
-  );
-}
-
-function getExtracted(stream: Extract<UiStreamRow, { kind: "jsonl" }>): ExtractedData | undefined {
+function getExt(stream: Extract<UiStreamRow, { kind: "jsonl" }>): ExtractedData | undefined {
   const item = stream.parsed.items.find((it) => it.parsed?.extracted);
   return item?.parsed?.extracted;
 }
 
-function JsonlSearchData({ stream }: { stream: Extract<UiStreamRow, { kind: "jsonl" }> }): JSX.Element {
-  const extracted = getExtracted(stream);
-  if (!extracted) return <></>;
+function JsonlView({ stream }: { stream: Extract<UiStreamRow, { kind: "jsonl" }> }): JSX.Element {
+  const ext = getExt(stream);
   return (
-    <div className="extracted-data">
-      <MetadataDisplay data={extracted} />
-      {extracted.searchQueries.length > 0 && <><h4>🔍 Search Queries ({extracted.searchQueries.length})</h4><SearchQueries queries={extracted.searchQueries} /></>}
-      {extracted.searchResults.length > 0 && <><h4>📄 Search Results ({extracted.searchResults.length} domains)</h4><SearchResults groups={extracted.searchResults} /></>}
+    <div className="event-details">
+      {ext && <SearchDataDisplay data={ext} />}
+      <div className="raw-data-section">
+        <JsonViewer data={stream.parsed} title="Raw JSONL Data" />
+      </div>
     </div>
   );
 }
 
-function JsonlView({ stream }: { stream: Extract<UiStreamRow, { kind: "jsonl" }> }): JSX.Element {
+function OtherView({ stream }: { stream: Extract<UiStreamRow, { kind: "other" }> }): JSX.Element {
   return (
-    <div>
-      <h3>JSON Lines</h3>
-      <div className="small">{stream.url}</div>
-      <JsonlSearchData stream={stream} />
-      <h4>Raw Data</h4>
-      <table className="table mono">
-        <thead><tr><th style={{ width: 60 }}>#</th><th>Line</th></tr></thead>
-        <tbody>{stream.parsed.items.map((it, idx) => <JsonlRow key={idx} line={it} idx={idx} />)}</tbody>
-      </table>
+    <div className="event-details">
+      <div className="no-search">Unknown response format</div>
+      <JsonViewer data={{ url: stream.url, note: stream.note }} title="Raw Data" />
     </div>
   );
 }
