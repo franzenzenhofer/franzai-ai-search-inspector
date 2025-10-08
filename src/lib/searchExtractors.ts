@@ -1,14 +1,17 @@
 import type { SearchResultGroup, SearchQuery, SearchResultEntry } from "@/types-search";
 import { queryFieldNames, resultFieldNames } from "./searchFieldNames";
 import { deepFind } from "./deepFind";
+import { extractMetadata, getString, getNumber } from "./fieldExtractors";
 
 export function extractEntry(e: Record<string, unknown>): SearchResultEntry {
   return {
-    url: typeof e.url === "string" ? e.url : "",
-    title: typeof e.title === "string" ? e.title : "",
-    snippet: typeof e.snippet === "string" ? e.snippet : "",
-    thumbnail: typeof e.thumbnail === "string" ? e.thumbnail : undefined,
-    authority: typeof e.authority === "number" ? e.authority : undefined,
+    url: getString(e, "url") || "", title: getString(e, "title") || "",
+    snippet: getString(e, "snippet") || "", thumbnail: getString(e, "thumbnail"),
+    authority: getNumber(e, "authority"), favicon: getString(e, "favicon"),
+    published_date: getString(e, "published_date"), last_updated: getString(e, "last_updated"),
+    author: getString(e, "author"), domain: getString(e, "domain"),
+    rank: getNumber(e, "rank"), score: getNumber(e, "score"),
+    metadata: extractMetadata(e),
   };
 }
 
