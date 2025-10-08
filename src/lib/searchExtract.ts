@@ -37,13 +37,26 @@ const emptyResult = (): ExtractedData => ({
   messages: [],
 });
 
+function logExtraction(queries: SearchQuery[], results: ReturnType<typeof extractResults>): void {
+  if (queries.length === 0 && results.length === 0) return;
+  console.log("[FranzAI Extraction]", {
+    foundQueries: queries.length,
+    foundResults: results.length,
+    queries: queries.map((q) => q.query),
+    results: results.map((r) => `${r.domain} (${r.entries.length})`),
+  });
+}
+
 export function extractSearchData(data: unknown): ExtractedData {
   if (!data || typeof data !== "object") return emptyResult();
   const obj = data as Record<string, unknown>;
+  const queries = extractQueries(obj);
+  const results = extractResults(obj);
+  logExtraction(queries, results);
   return {
     ...emptyResult(),
     ...extractMeta(obj),
-    searchQueries: extractQueries(obj),
-    searchResults: extractResults(obj),
+    searchQueries: queries,
+    searchResults: results,
   };
 }
