@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**IMPORTANT OPERATIONAL MODE**: User is NOT in front of the computer. NEVER ask questions, NEVER report progress, NEVER wait for approval. Complete ALL tasks in TODO list autonomously before reporting final results.
+
 **Reference Documents**:
 - **SYSTEM-ARCHITECTURE.md** - Architecture, data flow, module responsibilities
 - **CODE-REQUIREMENTS-BY-EXAMPLE.md** - Code examples, patterns, anti-patterns
