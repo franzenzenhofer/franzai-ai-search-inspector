@@ -8,8 +8,8 @@ interface ControlsProps {
 }
 
 function CaptureButton({ capturing, onStart, onStop }: { capturing: boolean; onStart: () => void; onStop: () => void }): JSX.Element {
-  if (!capturing) return <button className="btn primary" onClick={onStart} type="button">Start Capture</button>;
-  return <button className="btn" onClick={onStop} type="button">Stop Capture</button>;
+  if (!capturing) return <button className="btn primary" onClick={onStart} type="button">Enable Capture</button>;
+  return <button className="btn success" onClick={onStop} type="button">● Capturing</button>;
 }
 
 export function Controls({ capturing, onStart, onStop, onClear, onExport, onCopyReport }: ControlsProps): JSX.Element {

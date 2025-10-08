@@ -23,14 +23,14 @@ beforeEach(() => {
 describe("App rendering", () => {
   it("renders without crashing", () => {
     render(<App />);
-    expect(screen.getByText("Start Capture")).toBeInTheDocument();
+    expect(screen.getByText("Enable Capture")).toBeInTheDocument();
   });
 });
 
 describe("App components", () => {
   it("renders Controls component", () => {
     render(<App />);
-    expect(screen.getByText("Start Capture")).toBeInTheDocument();
+    expect(screen.getByText("Enable Capture")).toBeInTheDocument();
     expect(screen.getByText("Clear")).toBeInTheDocument();
     expect(screen.getByText("Export JSON")).toBeInTheDocument();
   });

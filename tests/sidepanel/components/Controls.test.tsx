@@ -8,14 +8,14 @@ const mockHandlers = { onStart: vi.fn(), onStop: vi.fn(), onClear: vi.fn(), onEx
 describe("Controls not capturing", () => {
   it("shows start button when not capturing", () => {
     render(<Controls capturing={false} {...mockHandlers} />);
-    expect(screen.getByText("Start Capture")).toBeInTheDocument();
+    expect(screen.getByText("Enable Capture")).toBeInTheDocument();
   });
 });
 
 describe("Controls capturing", () => {
-  it("shows stop button when capturing", () => {
+  it("shows capturing status when capturing", () => {
     render(<Controls capturing={true} {...mockHandlers} />);
-    expect(screen.getByText("Stop Capture")).toBeInTheDocument();
+    expect(screen.getByText("● Capturing")).toBeInTheDocument();
   });
 });
 
@@ -23,7 +23,7 @@ describe("Controls start interaction", () => {
   it("calls onStart when start clicked", async () => {
     const onStart = vi.fn();
     render(<Controls capturing={false} onStart={onStart} onStop={vi.fn()} onClear={vi.fn()} onExport={vi.fn()} onCopyReport={vi.fn()} />);
-    await userEvent.click(screen.getByText("Start Capture"));
+    await userEvent.click(screen.getByText("Enable Capture"));
     expect(onStart).toHaveBeenCalledTimes(1);
   });
 });
