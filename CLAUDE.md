@@ -102,6 +102,14 @@ Components (StreamTable, EventDetails)
 - Full token visible only when user toggles "Show secrets"
 - Implemented in `lib/jwt.ts` + `SecretToggle.tsx`
 
+**5. Centralized Error Handling - SINGLE SOURCE OF TRUTH**
+- **ALL errors** from all sources flow to `src/errors/ErrorMonitor.tsx`
+- Error monitor displays in UI (side panel footer)
+- Errors are **viewable and copyable** (full stack trace)
+- Each error shows **source context** (background worker, parser, UI, Chrome API)
+- Error sources: TypeScript errors, runtime errors, Chrome API errors, parser errors, network errors
+- Implementation: `src/errors/` directory with error aggregation
+
 ---
 
 ## Code Organization
@@ -119,6 +127,11 @@ src/
 ├── effects/                   # ⚠️ IMPURE FUNCTIONS ONLY - ALL SIDE EFFECTS
 │   ├── chrome.ts              # Chrome API calls (effectSendMessage, effectAttachDebugger)
 │   └── storage.ts             # Storage operations (effectSaveToStorage, effectLoadFromStorage)
+├── errors/                    # 🚨 CENTRALIZED ERROR HANDLING
+│   ├── ErrorMonitor.tsx       # Error display component (UI footer)
+│   ├── errorStore.ts          # Error aggregation store (all errors flow here)
+│   ├── errorTypes.ts          # Error type definitions with source context
+│   └── errorReporter.ts       # Global error reporter (catches all errors)
 ├── sidepanel/                 # React UI (impure by nature)
 │   ├── index.html
 │   ├── main.tsx               # React root
@@ -134,6 +147,9 @@ tests/
 ├── sse.test.ts                # SSE parser tests (100% coverage)
 ├── jwt.test.ts                # JWT decoder tests (100% coverage)
 ├── jsonl.test.ts              # JSONL parser tests (100% coverage)
+├── errors/
+│   ├── errorStore.test.ts     # Error store tests (100% coverage)
+│   └── errorReporter.test.ts  # Error reporter tests (100% coverage)
 └── effects/
     ├── chrome.test.ts         # Chrome effects tests (mocked)
     └── storage.test.ts        # Storage effects tests (mocked)
@@ -142,6 +158,7 @@ tests/
 **Directory Rules**:
 - `src/lib/` → **ONLY pure functions** → No Chrome APIs, no DOM, no I/O
 - `src/effects/` → **ONLY impure functions** → All side effects go here
+- `src/errors/` → **ALL error handling** → Single source of truth for errors
 - `src/types.ts` → **ONLY types** → No functions, no logic
 - `src/sidepanel/components/` → **React components** → Max 75 lines each
 - `tests/` → **Mirrors src/ structure** → Every file has corresponding test
@@ -541,6 +558,565 @@ function process(data: unknown): string {
   return data; // TypeScript knows data is string
 }
 ```
+
+---
+
+## CENTRALIZED ERROR HANDLING - MANDATORY ARCHITECTURE
+
+### Error Flow - ALL ERRORS → ONE LOCATION
+
+**Principle**: Every error from every source MUST flow to `src/errors/errorStore.ts`
+
+**Error Sources** (ALL must report to central store):
+1. **Background Worker Errors** → Chrome API failures, CDP errors
+2. **Parser Errors** → SSE/JSONL/JWT parsing failures
+3. **UI Runtime Errors** → React errors, component failures
+4. **Network Errors** → Failed requests, timeout errors
+5. **Storage Errors** → Chrome storage API failures
+6. **Type Errors** → Runtime type assertion failures
+7. **Unknown Errors** → Unhandled exceptions, promise rejections
+
+### Error Store Architecture
+
+**Location**: `src/errors/errorStore.ts`
+
+**Interface**:
+```typescript
+export interface ErrorEntry {
+  id: string;                    // Unique error ID (timestamp + random)
+  timestamp: number;              // When error occurred
+  source: ErrorSource;            // Where error came from
+  sourceFile?: string;            // File that threw error
+  sourceLine?: number;            // Line number (if available)
+  message: string;                // Human-readable message
+  stack?: string;                 // Full stack trace
+  context?: Record<string, unknown>; // Additional context
+  severity: 'error' | 'warning' | 'info';
+}
+
+export type ErrorSource =
+  | 'background-worker'
+  | 'parser-sse'
+  | 'parser-jsonl'
+  | 'parser-jwt'
+  | 'ui-component'
+  | 'chrome-api'
+  | 'network'
+  | 'storage'
+  | 'unknown';
+
+export interface ErrorStore {
+  errors: ErrorEntry[];
+  addError: (entry: Omit<ErrorEntry, 'id' | 'timestamp'>) => void;
+  clearErrors: () => void;
+  getErrors: () => ErrorEntry[];
+  subscribe: (callback: (errors: ErrorEntry[]) => void) => () => void;
+}
+```
+
+### Error Reporter - Global Error Catcher
+
+**Location**: `src/errors/errorReporter.ts`
+
+**Catches**:
+- `window.onerror` → Global JavaScript errors
+- `window.onunhandledrejection` → Unhandled promise rejections
+- React Error Boundaries → Component errors
+- Chrome API errors → `chrome.runtime.lastError`
+- Manual `reportError()` calls → Explicit error reporting
+
+**Implementation Pattern**:
+```typescript
+// src/errors/errorReporter.ts
+import { errorStore } from './errorStore';
+
+/**
+ * @impure Global error reporter - catches all errors
+ */
+export function effectInitializeErrorReporter(): void {
+  // Catch global errors
+  window.onerror = (message, source, lineno, colno, error) => {
+    errorStore.addError({
+      source: 'unknown',
+      sourceFile: source,
+      sourceLine: lineno,
+      message: String(message),
+      stack: error?.stack,
+      severity: 'error'
+    });
+  };
+
+  // Catch unhandled promise rejections
+  window.onunhandledrejection = (event) => {
+    errorStore.addError({
+      source: 'unknown',
+      message: String(event.reason),
+      stack: event.reason?.stack,
+      severity: 'error'
+    });
+  };
+}
+
+/**
+ * Manual error reporting function
+ */
+export function reportError(
+  source: ErrorSource,
+  error: Error | string,
+  context?: Record<string, unknown>
+): void {
+  const message = error instanceof Error ? error.message : error;
+  const stack = error instanceof Error ? error.stack : undefined;
+
+  errorStore.addError({
+    source,
+    message,
+    stack,
+    context,
+    severity: 'error'
+  });
+}
+```
+
+### Error Monitor Component - UI Display
+
+**Location**: `src/errors/ErrorMonitor.tsx`
+
+**Requirements**:
+- **Always visible** in UI (footer or collapsible panel)
+- **Shows error count** badge (e.g., "🔴 3 errors")
+- **Expandable** to show full error list
+- **Each error displays**:
+  - Timestamp (human-readable)
+  - Source (badge showing origin)
+  - Message (full text)
+  - Stack trace (collapsible)
+  - Context (JSON viewer)
+- **Copy button** for each error (copies full error as JSON)
+- **Copy all button** (copies all errors as JSON array)
+- **Clear button** (clears all errors)
+
+**Example UI**:
+```
+┌─────────────────────────────────────────────┐
+│ 🔴 Errors (3)                      [Clear]  │
+├─────────────────────────────────────────────┤
+│ [background-worker] 14:32:15                │
+│ Failed to attach debugger to tab 123        │
+│ [View Stack] [Copy]                         │
+├─────────────────────────────────────────────┤
+│ [parser-sse] 14:31:42                       │
+│ Invalid SSE format: missing data field      │
+│ File: src/lib/sse.ts:45                     │
+│ [View Stack] [Copy]                         │
+├─────────────────────────────────────────────┤
+│ [chrome-api] 14:30:18                       │
+│ chrome.runtime.lastError: No tab found      │
+│ [View Stack] [Copy]                         │
+└─────────────────────────────────────────────┘
+```
+
+### Error Reporting Pattern - How to Use
+
+**In Pure Functions** (parsers):
+```typescript
+// src/lib/sse.ts
+import { reportError } from '@/errors/errorReporter';
+
+export function parseEventStream(body: string): SseEvent[] {
+  try {
+    // Parsing logic
+    if (!body.trim()) {
+      throw new Error('Empty SSE body');
+    }
+    return parseEvents(body);
+  } catch (error) {
+    reportError('parser-sse', error as Error, { body: body.slice(0, 100) });
+    throw error; // Re-throw after reporting
+  }
+}
+```
+
+**In Impure Functions** (Chrome API):
+```typescript
+// src/effects/chrome.ts
+import { reportError } from '@/errors/errorReporter';
+
+/**
+ * @impure Attaches Chrome debugger
+ */
+export function effectAttachDebugger(tabId: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.debugger.attach({ tabId }, '1.3', () => {
+      if (chrome.runtime.lastError) {
+        const error = new Error(chrome.runtime.lastError.message);
+        reportError('chrome-api', error, { tabId, api: 'chrome.debugger.attach' });
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+```
+
+**In React Components**:
+```typescript
+// src/sidepanel/App.tsx
+import { reportError } from '@/errors/errorReporter';
+import { ErrorMonitor } from '@/errors/ErrorMonitor';
+
+function App() {
+  const handleCapture = () => {
+    try {
+      // Capture logic
+    } catch (error) {
+      reportError('ui-component', error as Error, { component: 'App', action: 'capture' });
+    }
+  };
+
+  return (
+    <div>
+      {/* Main UI */}
+      <ErrorMonitor /> {/* Always visible at bottom */}
+    </div>
+  );
+}
+```
+
+**In Background Worker**:
+```typescript
+// src/background.ts
+import { reportError } from '@/errors/errorReporter';
+
+chrome.debugger.onEvent.addListener((source, method, params) => {
+  try {
+    // Handle event
+  } catch (error) {
+    reportError('background-worker', error as Error, { method, params });
+  }
+});
+```
+
+### Error Handling Requirements - MANDATORY
+
+**Every function that can error MUST**:
+1. Wrap risky code in try/catch
+2. Call `reportError()` with correct source
+3. Include context (function params, state)
+4. Re-throw error after reporting (don't swallow)
+
+**Every Chrome API call MUST**:
+1. Check `chrome.runtime.lastError`
+2. Report error if exists
+3. Include API name and parameters in context
+
+**Every parser MUST**:
+1. Report parsing errors with sample data (first 100 chars)
+2. Specify parser type in source
+3. Include line number if possible
+
+**Error Monitor MUST**:
+1. Be visible at all times (even when collapsed)
+2. Show error count badge
+3. Update in real-time (reactive)
+4. Allow copying individual errors
+5. Allow copying all errors as JSON
+6. Allow clearing all errors
+
+---
+
+## CHROME EXTENSION BEST PRACTICES - 10 MANDATORY RULES
+
+### 1. Manifest V3 Strict Compliance - NO MANIFEST V2
+
+**Rule**: Use ONLY Manifest V3 APIs and patterns.
+
+**Forbidden**:
+- ❌ Background pages → Use service workers
+- ❌ `executeScript` with code strings → Use files only
+- ❌ Broad host permissions → Use activeTab + specific hosts
+- ❌ `webRequest` blocking → Use declarativeNetRequest
+
+**Required**:
+```json
+{
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "src/background.ts",
+    "type": "module"
+  }
+}
+```
+
+### 2. Minimal Permissions - Principle of Least Privilege
+
+**Rule**: Request ONLY permissions actually needed.
+
+**Pattern**:
+```json
+{
+  "permissions": [
+    "debugger",   // ONLY for CDP network capture
+    "sidePanel",  // ONLY for UI
+    "storage",    // ONLY for settings
+    "tabs"        // ONLY for active tab info
+  ],
+  "host_permissions": [
+    "https://chat.openai.com/*",    // Specific hosts only
+    "https://chatgpt.com/*"
+  ]
+}
+```
+
+**Forbidden**:
+- ❌ `<all_urls>` or `*://*/*` → Too broad
+- ❌ `http://*` → Insecure
+- ❌ Unused permissions
+
+### 3. Service Worker Lifecycle - Handle Termination
+
+**Rule**: Service workers can terminate at any time. Design for it.
+
+**Pattern**:
+```typescript
+// ❌ BAD - Assumes service worker stays alive
+const sessions = new Map(); // Lost on termination!
+
+// ✅ GOOD - Persist critical state
+chrome.storage.session.set({ sessions: Array.from(sessions.entries()) });
+
+// Restore on startup
+chrome.runtime.onStartup.addListener(async () => {
+  const { sessions } = await chrome.storage.session.get('sessions');
+  // Restore state
+});
+```
+
+**Requirements**:
+- Save state to `chrome.storage.session` or `chrome.storage.local`
+- Handle `chrome.runtime.onStartup` and `chrome.runtime.onInstalled`
+- No global variables that persist important data
+- Design for stateless service workers
+
+### 4. Message Passing - Structured Communication
+
+**Rule**: Use typed message passing between contexts.
+
+**Pattern**:
+```typescript
+// src/types.ts
+export type Message =
+  | { type: 'startCapture'; tabId: number }
+  | { type: 'stopCapture'; tabId: number }
+  | { type: 'captureData'; data: RawCapture };
+
+// Background worker
+chrome.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
+  if (msg.type === 'startCapture') {
+    // Handle with type safety
+  }
+  return true; // Keep channel open for async response
+});
+
+// Side panel
+chrome.runtime.sendMessage({ type: 'startCapture', tabId: 123 });
+```
+
+**Forbidden**:
+- ❌ Untyped messages (`msg.action`, `msg.data` without types)
+- ❌ `sendResponse` without `return true`
+- ❌ Long-lived connections without cleanup
+
+### 5. Content Security Policy - No Inline Code
+
+**Rule**: NO inline scripts, NO eval, NO unsafe-inline.
+
+**Pattern**:
+```html
+<!-- ❌ BAD -->
+<script>console.log('inline')</script>
+<div onclick="handleClick()">Click</div>
+
+<!-- ✅ GOOD -->
+<script src="main.js"></script>
+<div id="clickable">Click</div>
+<!-- Add listener in main.js -->
+```
+
+**Default CSP (Manifest V3)**:
+```
+script-src 'self'; object-src 'self'
+```
+
+**Forbidden**:
+- ❌ `eval()`, `new Function()`
+- ❌ Inline `<script>` tags
+- ❌ Inline event handlers (`onclick=""`)
+- ❌ `javascript:` URLs
+
+### 6. Chrome API Error Handling - Always Check lastError
+
+**Rule**: EVERY Chrome API callback MUST check `chrome.runtime.lastError`.
+
+**Pattern**:
+```typescript
+// ✅ GOOD - Always check
+chrome.debugger.attach({ tabId }, '1.3', () => {
+  if (chrome.runtime.lastError) {
+    reportError('chrome-api', new Error(chrome.runtime.lastError.message));
+    return;
+  }
+  // Proceed only if no error
+});
+
+// ❌ BAD - No error check
+chrome.debugger.attach({ tabId }, '1.3', () => {
+  // API might have failed silently!
+  chrome.debugger.sendCommand(...); // Will fail
+});
+```
+
+**Required Everywhere**:
+- `chrome.debugger.*`
+- `chrome.storage.*`
+- `chrome.tabs.*`
+- `chrome.runtime.sendMessage`
+- ANY Chrome API with callback
+
+### 7. Resource Cleanup - No Leaked Resources
+
+**Rule**: Clean up ALL resources when done.
+
+**Resources Requiring Cleanup**:
+- Chrome debugger sessions → `chrome.debugger.detach()`
+- Event listeners → Remove when unmounted
+- Timers → `clearTimeout`, `clearInterval`
+- Storage sessions → Clear temporary data
+- Message ports → `port.disconnect()`
+
+**Pattern**:
+```typescript
+// ✅ GOOD - React cleanup
+useEffect(() => {
+  const handleMessage = (msg: Message) => { /* ... */ };
+  chrome.runtime.onMessage.addListener(handleMessage);
+
+  return () => {
+    chrome.runtime.onMessage.removeListener(handleMessage);
+  };
+}, []);
+
+// ✅ GOOD - Debugger cleanup
+async function stopCapture(tabId: number) {
+  try {
+    await chrome.debugger.detach({ tabId });
+  } catch {
+    // Already detached - ignore
+  }
+}
+```
+
+### 8. Side Panel Best Practices - Optimal UX
+
+**Rule**: Side panel should be fast, responsive, and memory-efficient.
+
+**Requirements**:
+- **Lazy load** components (React.lazy, dynamic imports)
+- **Virtualize** long lists (react-window, react-virtuoso)
+- **Debounce** user inputs (search, filters)
+- **Limit** stored data (max N events, auto-trim)
+- **Clear** data on user action (Clear button)
+
+**Pattern**:
+```typescript
+// ✅ GOOD - Virtualized list
+import { FixedSizeList } from 'react-window';
+
+<FixedSizeList
+  height={600}
+  itemCount={rows.length}
+  itemSize={50}
+>
+  {({ index, style }) => <Row data={rows[index]} style={style} />}
+</FixedSizeList>
+
+// ✅ GOOD - Auto-trim data
+const MAX_ROWS = 1000;
+if (rows.length > MAX_ROWS) {
+  rows = rows.slice(-MAX_ROWS); // Keep last 1000 only
+}
+```
+
+### 9. Debugger Protocol - Respect Limits
+
+**Rule**: Chrome Debugger Protocol has limits. Respect them.
+
+**Limits**:
+- Max response body size: ~50MB (configurable via `maxTotalBufferSize`)
+- Max concurrent sessions: Limited per tab
+- Session exclusive: Only one debugger per tab
+
+**Pattern**:
+```typescript
+// ✅ GOOD - Set buffer size
+chrome.debugger.sendCommand(
+  { tabId },
+  'Network.enable',
+  { maxTotalBufferSize: 52428800 } // 50MB
+);
+
+// ✅ GOOD - Check if already attached
+chrome.debugger.getTargets((targets) => {
+  const attached = targets.find(t => t.tabId === tabId && t.attached);
+  if (attached) {
+    // Already attached - don't re-attach
+    return;
+  }
+  chrome.debugger.attach({ tabId }, '1.3');
+});
+```
+
+**Forbidden**:
+- ❌ Attaching without checking existing sessions
+- ❌ Requesting unlimited buffer size
+- ❌ Capturing all network traffic (filter specific URLs)
+
+### 10. Extension Updates - Handle Gracefully
+
+**Rule**: Extension can update at any time. Handle it gracefully.
+
+**Pattern**:
+```typescript
+// Listen for update events
+chrome.runtime.onUpdateAvailable.addListener((details) => {
+  // Save state before reload
+  chrome.storage.local.set({
+    pendingUpdate: true,
+    savedState: getCurrentState()
+  });
+
+  // Reload extension
+  chrome.runtime.reload();
+});
+
+// Restore after update
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === 'update') {
+    const { savedState } = await chrome.storage.local.get('savedState');
+    if (savedState) {
+      restoreState(savedState);
+      chrome.storage.local.remove('savedState');
+    }
+  }
+});
+```
+
+**Requirements**:
+- Handle `chrome.runtime.onInstalled` (install, update, chrome_update)
+- Save critical state before update
+- Restore state after update
+- Show update notification to user (optional)
 
 ---
 
