@@ -40,7 +40,7 @@ export interface ParsedStream {
 
 export interface JsonlItem {
   line: string;
-  parsed?: unknown;
+  parsed?: (Record<string, unknown> & { extracted?: import("@/lib/searchExtract").ExtractedData | undefined }) | undefined;
 }
 
 export interface ParsedJsonl {

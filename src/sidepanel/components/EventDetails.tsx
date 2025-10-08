@@ -1,5 +1,8 @@
 import type { UiStreamRow, SecretVisibility } from "@/types";
+import type { ExtractedData } from "@/lib/searchExtract";
 import { SseView } from "./SseView";
+import { SearchResults } from "./SearchResults";
+import { SearchQueries } from "./SearchQueries";
 
 interface EventDetailsProps {
   stream: UiStreamRow | null;
@@ -25,11 +28,29 @@ function JsonlRow({ line, idx }: { line: { line: string }; idx: number }): JSX.E
   );
 }
 
+function getExtracted(stream: Extract<UiStreamRow, { kind: "jsonl" }>): ExtractedData | undefined {
+  const item = stream.parsed.items.find((it) => it.parsed?.extracted);
+  return item?.parsed?.extracted;
+}
+
+function JsonlSearchData({ stream }: { stream: Extract<UiStreamRow, { kind: "jsonl" }> }): JSX.Element {
+  const extracted = getExtracted(stream);
+  if (!extracted) return <></>;
+  return (
+    <>
+      {extracted.searchQueries.length > 0 && <><h4>Search Queries</h4><SearchQueries queries={extracted.searchQueries} /></>}
+      {extracted.searchResults.length > 0 && <><h4>Search Results</h4><SearchResults groups={extracted.searchResults} /></>}
+    </>
+  );
+}
+
 function JsonlView({ stream }: { stream: Extract<UiStreamRow, { kind: "jsonl" }> }): JSX.Element {
   return (
     <div>
       <h3>JSON Lines</h3>
       <div className="small">{stream.url}</div>
+      <JsonlSearchData stream={stream} />
+      <h4>Raw Data</h4>
       <table className="table mono">
         <thead><tr><th style={{ width: 60 }}>#</th><th>Line</th></tr></thead>
         <tbody>{stream.parsed.items.map((it, idx) => <JsonlRow key={idx} line={it} idx={idx} />)}</tbody>

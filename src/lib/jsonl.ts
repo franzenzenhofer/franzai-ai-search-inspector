@@ -6,8 +6,10 @@ import { extractSearchData } from "./searchExtract";
 function enrichItem(line: string): JsonlItem {
   const result = tryParseJson(line);
   const parsed = result.success ? result.value : undefined;
-  const enriched =
-    parsed ? { ...parsed, extracted: extractSearchData(parsed) } : parsed;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { line, parsed: undefined };
+  }
+  const enriched = { ...parsed, extracted: extractSearchData(parsed) };
   return { line, parsed: enriched };
 }
 
