@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "FranzAI AI Search Inspector",
-  "version": "1.0.1",
+  "name": "FranzAI Search Data Inspector",
+  "version": "1.0.3",
   "description": "Inspect AI search queries and results from ChatGPT conversations in real-time.",
   "action": {
-    "default_title": "FranzAI AI Search Inspector"
+    "default_title": "FranzAI Search Data Inspector"
   },
   "permissions": [
     "storage",
