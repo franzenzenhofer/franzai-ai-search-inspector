@@ -32,7 +32,7 @@ describe("App components", () => {
     render(<App />);
     expect(screen.getByText("Enable Capture")).toBeInTheDocument();
     expect(screen.getByText("Clear")).toBeInTheDocument();
-    expect(screen.getByText("Export JSON")).toBeInTheDocument();
+    expect(screen.getByText("Copy Full Report")).toBeInTheDocument();
   });
 });
 

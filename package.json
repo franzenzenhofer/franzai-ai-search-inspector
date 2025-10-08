@@ -1,13 +1,14 @@
 {
   "name": "franzai-ai-search-inspector",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Chrome side panel extension for inspecting real SSE and JSONL traffic.",
   "type": "module",
   "scripts": {
     "prepare": "husky install",
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run bump-version && vite build",
+    "bump-version": "node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));const v=p.version.split('.');v[2]=parseInt(v[2])+1;p.version=v.join('.');fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\\n');const m=JSON.parse(fs.readFileSync('manifest.json'));m.version=p.version;fs.writeFileSync('manifest.json',JSON.stringify(m,null,2)+'\\n');console.log('Bumped version to',p.version);\"",
     "lint": "eslint src tests --ext .ts,.tsx --max-warnings=0",
     "test": "vitest run --coverage",
     "test:watch": "vitest",

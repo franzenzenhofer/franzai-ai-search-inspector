@@ -1,12 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "SSE Inspector (Side Panel)",
-  "version": "1.0.0",
-  "description": "Inspect and parse real SSE/JSONL responses from the current tab.",
+  "name": "FranzAI AI Search Inspector",
+  "version": "1.0.1",
+  "description": "Inspect AI search queries and results from ChatGPT conversations in real-time.",
   "action": {
-    "default_title": "SSE Inspector"
+    "default_title": "FranzAI AI Search Inspector"
   },
-  "permissions": ["storage", "sidePanel", "debugger", "tabs"],
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "debugger",
+    "tabs"
+  ],
   "host_permissions": [
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
