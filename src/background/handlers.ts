@@ -18,40 +18,39 @@ export const handleResponseReceived: ResponseHandler = ({ requestId, response })
   }
 };
 
-export const handleLoadingFinished: LoadingHandler = ({ requestId }) => {
-  try {
-    const url = pendingRequests.get(requestId);
-    if (!url) return;
-    pendingRequests.delete(requestId);
-    void effectFetchBody(requestId, url);
-  } catch (error) {
-    reportError("background-handler", error as Error, { handler: "loadingFinished" });
-  }
-};
+export function createHandleLoadingFinished(tabId: number): LoadingHandler {
+  return ({ requestId }) => {
+    try {
+      const url = pendingRequests.get(requestId);
+      if (!url) return;
+      pendingRequests.delete(requestId);
+      void effectFetchBody(requestId, url, tabId);
+    } catch (error) {
+      reportError("background-handler", error as Error, { handler: "loadingFinished" });
+    }
+  };
+}
 
-async function effectFetchBody(requestId: string, url: string): Promise<void> {
+async function effectFetchBody(requestId: string, url: string, tabId: number): Promise<void> {
   try {
-    const result = await chrome.debugger.sendCommand({ tabId: chrome.devtools.inspectedWindow.tabId }, "Network.getResponseBody", { requestId }) as { body?: string };
+    const result = await chrome.debugger.sendCommand({ tabId }, "Network.getResponseBody", { requestId }) as { body?: string; base64Encoded?: boolean };
     if (!result.body) return;
-    const stream: CapturedStream = { timestamp: Date.now(), url, requestId, body: result.body };
-    await chrome.storage.session.get(["streams"]).then((data) => {
-      const streams = (data.streams as CapturedStream[] | undefined) ?? [];
-      streams.push(stream);
-      if (streams.length > 1000) streams.splice(0, streams.length - 1000);
-      return chrome.storage.session.set({ streams });
-    });
+    const body = result.base64Encoded ? atob(result.body) : result.body;
+    const stream: CapturedStream = { timestamp: Date.now(), url, requestId, body };
+    void chrome.runtime.sendMessage({ _from: "bg", kind: "capture", data: stream });
   } catch (error) {
     reportError("background-handler", error as Error, { requestId, url });
   }
 }
 
 export function createDebuggerListener(tabId: number): (source: chrome.debugger.Debuggee, method: string, params?: object) => void {
+  const handleLoading = createHandleLoadingFinished(tabId);
   return (_source, method, params) => {
     try {
       if (_source.tabId !== tabId) return;
       const event = { method, params } as DebuggerEvent;
       if (event.method === "Network.responseReceived") handleResponseReceived(event.params as Parameters<ResponseHandler>[0]);
-      if (event.method === "Network.loadingFinished") handleLoadingFinished(event.params as Parameters<LoadingHandler>[0]);
+      if (event.method === "Network.loadingFinished") handleLoading(event.params as Parameters<LoadingHandler>[0]);
     } catch (error) {
       reportError("background-listener", error as Error, { method });
     }

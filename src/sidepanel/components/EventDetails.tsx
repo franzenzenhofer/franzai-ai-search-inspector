@@ -1,43 +1,46 @@
-import type { CapturedStream, SecretVisibility } from "@/types";
-import { parseEventStream, summarize } from "@/lib/sse";
-import { maskToken } from "@/lib/util";
+import type { UiStreamRow, SecretVisibility } from "@/types";
+import { SseView } from "./SseView";
 
 interface EventDetailsProps {
-  stream: CapturedStream | null;
+  stream: UiStreamRow | null;
   visibility: SecretVisibility;
 }
 
-function formatValue(value: unknown, visibility: SecretVisibility): string {
-  if (typeof value === "string" && value.length > 50 && visibility === "masked") {
-    return maskToken(value);
-  }
-  return JSON.stringify(value, null, 2);
-}
-
-function DetailRow({ label, value, visibility }: { label: string; value: unknown; visibility: SecretVisibility }): JSX.Element {
+function OtherView({ stream }: { stream: Extract<UiStreamRow, { kind: "other" }> }): JSX.Element {
   return (
-    <div className="detail-row">
-      <span className="detail-label">{label}:</span>
-      <pre className="detail-value mono">{formatValue(value, visibility)}</pre>
+    <div>
+      <h3>Other Response</h3>
+      <div className="small">{stream.url}</div>
+      <pre className="mono">{stream.note}</pre>
     </div>
   );
 }
 
-function StreamDetails({ stream, visibility }: { stream: CapturedStream; visibility: SecretVisibility }): JSX.Element {
-  const events = parseEventStream(stream.body);
-  const summary = summarize(events);
+function JsonlRow({ line, idx }: { line: { line: string }; idx: number }): JSX.Element {
   return (
-    <div className="details">
-      <DetailRow label="URL" value={stream.url} visibility={visibility} />
-      <DetailRow label="Request ID" value={stream.requestId} visibility={visibility} />
-      <DetailRow label="Timestamp" value={new Date(stream.timestamp).toISOString()} visibility={visibility} />
-      <DetailRow label="Summary" value={summary} visibility={visibility} />
-      <DetailRow label="Events" value={events.length} visibility={visibility} />
+    <tr>
+      <td>{idx + 1}</td>
+      <td><pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{line.line}</pre></td>
+    </tr>
+  );
+}
+
+function JsonlView({ stream }: { stream: Extract<UiStreamRow, { kind: "jsonl" }> }): JSX.Element {
+  return (
+    <div>
+      <h3>JSON Lines</h3>
+      <div className="small">{stream.url}</div>
+      <table className="table mono">
+        <thead><tr><th style={{ width: 60 }}>#</th><th>Line</th></tr></thead>
+        <tbody>{stream.parsed.items.map((it, idx) => <JsonlRow key={idx} line={it} idx={idx} />)}</tbody>
+      </table>
     </div>
   );
 }
 
 export function EventDetails({ stream, visibility }: EventDetailsProps): JSX.Element {
   if (!stream) return <div className="empty">Select a stream to view details</div>;
-  return <StreamDetails stream={stream} visibility={visibility} />;
+  if (stream.kind === "other") return <OtherView stream={stream} />;
+  if (stream.kind === "jsonl") return <JsonlView stream={stream} />;
+  return <SseView stream={stream} visibility={visibility} />;
 }

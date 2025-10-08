@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { handleResponseReceived, handleLoadingFinished, createDebuggerListener } from "@/background/handlers";
+import { handleResponseReceived, createHandleLoadingFinished, createDebuggerListener } from "@/background/handlers";
 
+const mockRuntime = { sendMessage: vi.fn() };
 const mockChrome = {
   debugger: { sendCommand: vi.fn() },
-  devtools: { inspectedWindow: { tabId: 123 } },
-  storage: { session: { get: vi.fn(), set: vi.fn() } },
+  runtime: mockRuntime,
 };
 global.chrome = mockChrome as unknown as typeof chrome;
 
@@ -15,15 +15,14 @@ describe("handleResponseReceived", () => {
   });
 });
 
-describe("handleLoadingFinished", () => {
+describe("createHandleLoadingFinished", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockChrome.storage.session.get.mockResolvedValue({ streams: [] });
-    mockChrome.storage.session.set.mockResolvedValue(undefined);
   });
 
   it("ignores requests not in pending map", () => {
-    handleLoadingFinished({ requestId: "unknown", encodedDataLength: 100 });
+    const handler = createHandleLoadingFinished(123);
+    handler({ requestId: "unknown", encodedDataLength: 100 });
     expect(mockChrome.debugger.sendCommand).not.toHaveBeenCalled();
   });
 });

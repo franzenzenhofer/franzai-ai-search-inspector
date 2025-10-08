@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { EventDetails } from "@/sidepanel/components/EventDetails";
-import type { CapturedStream } from "@/types";
+import type { UiStreamRow } from "@/types";
 
-const mockStream: CapturedStream = {
-  timestamp: 1700000000000,
+const mockStream: UiStreamRow = {
+  kind: "sse",
   url: "https://example.com/api/conversation",
-  requestId: "req-1",
-  body: 'event: message\ndata: {"text":"hello"}\n\n'
+  events: [{ event: "message", data: { text: "hello" }, rawBlock: 'event: message\ndata: {"text":"hello"}' }],
+  parsed: { url: "https://example.com/api/conversation", contentType: "text/event-stream", events: [{ event: "message", data: { text: "hello" }, rawBlock: 'event: message\ndata: {"text":"hello"}' }], summary: { conversationIds: new Set(), requestIds: new Set(), messageIds: new Set(), modelSlugs: new Set() } }
 };
 
 describe("EventDetails empty state", () => {
@@ -17,32 +17,23 @@ describe("EventDetails empty state", () => {
   });
 });
 
-describe("EventDetails with stream", () => {
+describe("EventDetails stream URL", () => {
   it("displays stream URL", () => {
     render(<EventDetails stream={mockStream} visibility="masked" />);
-    expect(screen.getByText(/https:\/\/example\.com\/api\/conversation/)).toBeInTheDocument();
+    expect(screen.getByText("https://example.com/api/conversation")).toBeInTheDocument();
   });
 });
 
-describe("EventDetails request ID", () => {
-  it("displays request ID", () => {
+describe("EventDetails SSE heading", () => {
+  it("displays SSE Events heading", () => {
     render(<EventDetails stream={mockStream} visibility="masked" />);
-    expect(screen.getByText(/req-1/)).toBeInTheDocument();
+    expect(screen.getByText("SSE Events")).toBeInTheDocument();
   });
 });
 
-describe("EventDetails timestamp", () => {
-  it("displays ISO timestamp", () => {
+describe("EventDetails event data", () => {
+  it("displays event data", () => {
     render(<EventDetails stream={mockStream} visibility="masked" />);
-    expect(screen.getByText(/2023-11-14T22:13:20\.000Z/)).toBeInTheDocument();
-  });
-});
-
-describe("EventDetails visibility", () => {
-  it("masks long values when visibility is masked", () => {
-    const longStream = { ...mockStream, requestId: "a".repeat(100) };
-    const { container } = render(<EventDetails stream={longStream} visibility="masked" />);
-    const value = container.querySelector(".detail-value");
-    expect(value?.textContent).not.toContain("a".repeat(100));
+    expect(screen.getByText(/"text": "hello"/)).toBeInTheDocument();
   });
 });

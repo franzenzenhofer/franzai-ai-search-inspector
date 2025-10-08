@@ -3,7 +3,13 @@ import { render, screen } from "@testing-library/react";
 import { App } from "@/sidepanel/App";
 
 const mockChrome = {
-  runtime: { sendMessage: vi.fn() },
+  runtime: {
+    sendMessage: vi.fn(),
+    onMessage: {
+      addListener: vi.fn(),
+      removeListener: vi.fn()
+    }
+  },
   tabs: { query: vi.fn() }
 };
 global.chrome = mockChrome as unknown as typeof chrome;
