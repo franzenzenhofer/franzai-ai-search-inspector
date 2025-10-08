@@ -1,4 +1,6 @@
 import type { SearchResultGroup, SearchQuery, SearchResultEntry } from "@/types-search";
+import { queryFieldNames, resultFieldNames } from "./searchFieldNames";
+import { deepFind } from "./deepFind";
 
 export function extractEntry(e: Record<string, unknown>): SearchResultEntry {
   return {
@@ -21,26 +23,9 @@ export function extractGroup(g: Record<string, unknown>): SearchResultGroup {
   };
 }
 
-function recurseFind(current: unknown, key: string, results: unknown[]): void {
-  if (!current || typeof current !== "object") return;
-  const curr = current as Record<string, unknown>;
-  if (Array.isArray(curr[key])) {
-    results.push(...(curr[key] as unknown[]));
-  } else if (curr[key] !== undefined) {
-    results.push(curr[key]);
-  }
-  Object.values(curr).forEach((v) => recurseFind(v, key, results));
-}
-
-function deepFind(obj: unknown, key: string): unknown[] {
-  const results: unknown[] = [];
-  recurseFind(obj, key, results);
-  return results;
-}
-
 export function extractResults(obj: Record<string, unknown>): SearchResultGroup[] {
-  const groups = deepFind(obj, "search_result_groups");
-  return groups
+  const all = resultFieldNames.flatMap((k) => deepFind(obj, k));
+  return all
     .filter((g): g is Record<string, unknown> => typeof g === "object" && g !== null)
     .map(extractGroup);
 }
@@ -59,14 +44,17 @@ function toQuery(item: unknown): SearchQuery | null {
   return null;
 }
 
-export function extractQueries(obj: Record<string, unknown>): SearchQuery[] {
-  const keys = ["search_model_queries", "queries", "query", "search_query"];
-  const all = keys.flatMap((k) => deepFind(obj, k));
-  const queries = all.map(toQuery).filter((q): q is SearchQuery => q !== null);
+function dedupeQueries(queries: SearchQuery[]): SearchQuery[] {
   const seen = new Set<string>();
   return queries.filter((q) => {
     if (seen.has(q.query)) return false;
     seen.add(q.query);
     return true;
   });
+}
+
+export function extractQueries(obj: Record<string, unknown>): SearchQuery[] {
+  const all = queryFieldNames.flatMap((k) => deepFind(obj, k));
+  const queries = all.map(toQuery).filter((q): q is SearchQuery => q !== null);
+  return dedupeQueries(queries);
 }
