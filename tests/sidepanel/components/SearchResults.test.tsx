@@ -40,6 +40,6 @@ describe("SearchResults with data", () => {
 
   it("renders authority badge when present", () => {
     render(<SearchResults groups={groups} />);
-    expect(screen.getByText("95")).toBeInTheDocument();
+    expect(screen.getByText("auth:95")).toBeInTheDocument();
   });
 });
