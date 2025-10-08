@@ -1,55 +1,66 @@
 import { memo } from "react";
-import type { CapturedStream } from "@/types";
+import type { UiStreamRow } from "@/types";
 
 interface StreamTableProps {
-  streams: CapturedStream[];
-  onSelect: (stream: CapturedStream) => void;
-  selected: CapturedStream | null;
+  rows: UiStreamRow[];
+  selectedIndex: number | null;
+  onSelect: (index: number) => void;
 }
 
-const StreamRow = memo(function StreamRow({ stream, onSelect, isSelected }: { stream: CapturedStream; onSelect: () => void; isSelected: boolean }): JSX.Element {
-  const time = new Date(stream.timestamp).toLocaleTimeString();
-  const url = new URL(stream.url).pathname;
+function SummaryCell({ row }: { row: UiStreamRow }): JSX.Element {
+  if (row.kind === "sse") {
+    return (
+      <>
+        {row.parsed.summary.deltaEncoding && <span className="badge" title="delta_encoding">delta={row.parsed.summary.deltaEncoding}</span>}{" "}
+        {!!row.parsed.summary.modelSlugs.size && <span className="badge" title="model slug(s)">model: {[...row.parsed.summary.modelSlugs].join(",")}</span>}{" "}
+        {!!row.parsed.summary.requestIds.size && <span className="badge" title="request ids">reqs: {row.parsed.summary.requestIds.size}</span>}{" "}
+        events: {row.events.length}
+      </>
+    );
+  }
+  if (row.kind === "jsonl") return <>lines: {row.parsed.items.length}</>;
+  return <>{row.note}</>;
+}
+
+function TypeBadge({ kind }: { kind: "sse" | "jsonl" | "other" }): JSX.Element {
+  if (kind === "sse") return <span className="badge">SSE</span>;
+  if (kind === "jsonl") return <span className="badge">JSONL</span>;
+  return <span className="badge warn">OTHER</span>;
+}
+
+function RowComponent({ row, index, isSelected, onSelect }: { row: UiStreamRow; index: number; isSelected: boolean; onSelect: (i: number) => void }): JSX.Element {
   return (
-    <tr className={isSelected ? "row selected" : "row"} onClick={onSelect}>
-      <td className="cell">{time}</td>
-      <td className="cell">{url}</td>
-      <td className="cell mono">{stream.requestId}</td>
+    <tr onClick={() => onSelect(index)} style={{ background: isSelected ? "#0f1722" : "transparent", cursor: "pointer" }}>
+      <td><TypeBadge kind={row.kind} /></td>
+      <td className="small" title={row.url}>{row.url}</td>
+      <td className="small"><SummaryCell row={row} /></td>
     </tr>
   );
-});
+}
 
-const TableHeader = memo(function TableHeader(): JSX.Element {
-  return (
-    <thead>
-      <tr>
-        <th className="header">Time</th>
-        <th className="header">URL</th>
-        <th className="header">Request ID</th>
-      </tr>
-    </thead>
-  );
-});
-
-const TableBody = memo(function TableBody({ streams, onSelect, selected }: Pick<StreamTableProps, "streams" | "onSelect" | "selected">): JSX.Element {
-  return (
-    <tbody>
-      {streams.map((stream) => (
-        <StreamRow
-          key={stream.requestId}
-          stream={stream}
-          onSelect={() => onSelect(stream)}
-          isSelected={selected?.requestId === stream.requestId}
-        />
-      ))}
-    </tbody>
-  );
-});
+function TableBody({ rows, selectedIndex, onSelect }: StreamTableProps): JSX.Element {
+  if (rows.length === 0) {
+    return (
+      <tbody>
+        <tr>
+          <td colSpan={3} className="small">No captured requests yet. Click <b>Start capture</b> and use ChatGPT (or reload).</td>
+        </tr>
+      </tbody>
+    );
+  }
+  return <tbody>{rows.map((r, i) => <RowComponent key={i} row={r} index={i} isSelected={selectedIndex === i} onSelect={onSelect} />)}</tbody>;
+}
 
 export const StreamTable = memo(function StreamTable(props: StreamTableProps): JSX.Element {
   return (
-    <table className="table">
-      <TableHeader />
+    <table className="table mono">
+      <thead>
+        <tr>
+          <th style={{ width: 90 }}>Type</th>
+          <th>URL</th>
+          <th style={{ width: 240 }}>Summary</th>
+        </tr>
+      </thead>
       <TableBody {...props} />
     </table>
   );

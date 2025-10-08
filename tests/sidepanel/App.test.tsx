@@ -46,8 +46,9 @@ describe("App secret toggle", () => {
 describe("App empty state", () => {
   it("shows empty table when no streams", () => {
     render(<App />);
-    expect(screen.getByText("Time")).toBeInTheDocument();
+    expect(screen.getByText("Type")).toBeInTheDocument();
     expect(screen.getByText("URL")).toBeInTheDocument();
+    expect(screen.getByText("Summary")).toBeInTheDocument();
   });
 });
 

@@ -2,45 +2,51 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StreamTable } from "@/sidepanel/components/StreamTable";
-import type { CapturedStream } from "@/types";
+import type { UiStreamRow } from "@/types";
 
-const mockStreams: CapturedStream[] = [
-  { timestamp: 1700000000000, url: "https://example.com/api/conversation", requestId: "req-1", body: "data" },
-  { timestamp: 1700000001000, url: "https://example.com/api/upload", requestId: "req-2", body: "data2" }
+const mockRows: UiStreamRow[] = [
+  { kind: "sse", url: "https://example.com/api/conversation", events: [{ event: "message", data: { text: "hi" }, rawBlock: "event: message\ndata: {\"text\":\"hi\"}" }], parsed: { url: "https://example.com/api/conversation", contentType: "text/event-stream", events: [{ event: "message", data: { text: "hi" }, rawBlock: "event: message\ndata: {\"text\":\"hi\"}" }], summary: { conversationIds: new Set(), requestIds: new Set(["req-1"]), messageIds: new Set(), modelSlugs: new Set(["gpt-4"]) } } },
+  { kind: "jsonl", url: "https://example.com/api/upload", parsed: { url: "https://example.com/api/upload", items: [{ line: "{\"foo\":1}" }, { line: "{\"bar\":2}" }] } }
 ];
 
-describe("StreamTable empty state", () => {
-  it("renders empty table with headers", () => {
-    render(<StreamTable streams={[]} onSelect={vi.fn()} selected={null} />);
-    expect(screen.getByText("Time")).toBeInTheDocument();
-    expect(screen.getByText("URL")).toBeInTheDocument();
-    expect(screen.getByText("Request ID")).toBeInTheDocument();
+describe("StreamTable empty", () => {
+  it("shows empty message", () => {
+    render(<StreamTable rows={[]} selectedIndex={null} onSelect={vi.fn()} />);
+    expect(screen.getByText(/No captured requests yet/)).toBeInTheDocument();
   });
 });
 
-describe("StreamTable with data", () => {
-  it("renders stream rows", () => {
-    render(<StreamTable streams={mockStreams} onSelect={vi.fn()} selected={null} />);
-    expect(screen.getByText("/api/conversation")).toBeInTheDocument();
-    expect(screen.getByText("req-1")).toBeInTheDocument();
+describe("StreamTable headers", () => {
+  it("renders column headers", () => {
+    render(<StreamTable rows={mockRows} selectedIndex={null} onSelect={vi.fn()} />);
+    expect(screen.getByText("Type")).toBeInTheDocument();
+    expect(screen.getByText("URL")).toBeInTheDocument();
+    expect(screen.getByText("Summary")).toBeInTheDocument();
+  });
+});
+
+describe("StreamTable rows", () => {
+  it("renders SSE badges and summary", () => {
+    render(<StreamTable rows={mockRows} selectedIndex={null} onSelect={vi.fn()} />);
+    expect(screen.getByText("SSE")).toBeInTheDocument();
+    expect(screen.getByText(/events: 1/)).toBeInTheDocument();
+    expect(screen.getByText(/model: gpt-4/)).toBeInTheDocument();
+  });
+
+  it("renders JSONL badges and summary", () => {
+    render(<StreamTable rows={mockRows} selectedIndex={null} onSelect={vi.fn()} />);
+    expect(screen.getByText("JSONL")).toBeInTheDocument();
+    expect(screen.getByText(/lines: 2/)).toBeInTheDocument();
   });
 });
 
 describe("StreamTable selection", () => {
-  it("calls onSelect when row clicked", async () => {
+  it("calls onSelect with index when row clicked", async () => {
     const onSelect = vi.fn();
-    render(<StreamTable streams={mockStreams} onSelect={onSelect} selected={null} />);
-    await userEvent.click(screen.getByText("req-1"));
-    expect(onSelect).toHaveBeenCalledWith(mockStreams[0]);
-  });
-});
-
-describe("StreamTable selected styling", () => {
-  it("applies selected class to selected row", () => {
-    const selected = mockStreams[0];
-    if (!selected) throw new Error("Test data invalid");
-    const { container } = render(<StreamTable streams={mockStreams} onSelect={vi.fn()} selected={selected} />);
-    const rows = container.querySelectorAll(".row");
-    expect(rows[0]).toHaveClass("selected");
+    render(<StreamTable rows={mockRows} selectedIndex={null} onSelect={onSelect} />);
+    const sseRow = screen.getByText("SSE").closest("tr");
+    if (!sseRow) throw new Error("SSE row not found");
+    await userEvent.click(sseRow);
+    expect(onSelect).toHaveBeenCalledWith(0);
   });
 });
