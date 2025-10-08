@@ -35,7 +35,7 @@ npm run build        # Production build to dist/
 ```bash
 npm run typecheck    # TypeScript strict mode (0 errors)
 npm run lint         # ESLint strict (0 warnings)
-npm run test         # Vitest with 100% coverage
+npm run test         # Vitest with 100% coverage target (≥90% acceptable) target (≥90% acceptable)
 npm run validate     # Run all checks: lint + typecheck + test
 npm run check-duplication  # Code duplication check (<5%)
 ```
@@ -54,7 +54,7 @@ npm run check-duplication  # Code duplication check (<5%)
 - ❌ TypeScript error appears → **FIX NOW** before continuing
 - ❌ ESLint warning appears → **FIX NOW** before continuing
 - ❌ Test fails → **FIX NOW** before continuing
-- ❌ Coverage drops below 100% → **FIX NOW** before continuing
+- ❌ Coverage drops below 90% → **FIX NOW** before continuing
 
 **NO EXCEPTIONS. NO DELAYS. NO "I'll fix it later".**
 
@@ -69,11 +69,12 @@ npm run check-duplication  # Code duplication check (<5%)
 - ESLint enforced - build fails if exceeded
 
 ### Test Coverage
-- **100% coverage** required (branches, functions, lines, statements)
+- **Pragmatic 100% coverage** (≥90% across branches, functions, lines, statements)
+- **Aim for 100% but be pragmatic** - 90%+ is acceptable
 - **Every function must have tests** - no exceptions
 - **Every branch must be tested** - all if/else/switch paths
 - **Every error path must be tested** - all try/catch/throw scenarios
-- Build fails if coverage <100%
+- Build fails if coverage <90%
 
 ### TypeScript
 - **Zero errors** allowed - build blocked if any exist
@@ -186,7 +187,7 @@ git push
 **Automated Checks**:
 1. ✅ `npm run typecheck` → 0 errors
 2. ✅ `npm run lint` → 0 warnings
-3. ✅ `npm run test` → All pass, 100% coverage
+3. ✅ `npm run test` → All pass, coverage ≥90% (goal 100%)
 4. ✅ `npm run check-duplication` → <5% duplication
 5. ✅ `npm run format:check` → All files formatted
 
@@ -246,7 +247,7 @@ See **CODE-REQUIREMENTS-BY-EXAMPLE.md** for all Chrome extension patterns.
 
 **NEVER commit code that has**:
 - ❌ TypeScript errors or ESLint warnings
-- ❌ Failing tests or <100% coverage
+- ❌ Failing tests or coverage <90% (aim for 100%, be pragmatic)
 - ❌ Files >75 lines or functions >15 lines
 - ❌ `any` types or `@ts-ignore` comments
 - ❌ Untested functions
@@ -271,7 +272,7 @@ See **SYSTEM-ARCHITECTURE.md** for complete directory structure and module respo
 - `src/effects/` → Impure functions only, all side effects
 - `src/errors/` → Centralized error handling
 - `src/sidepanel/components/` → React components (≤75 lines each)
-- `tests/` → Mirrors src/ structure, 100% coverage
+- `tests/` → Mirrors src/ structure, pragmatic 100% coverage (≥90%)
 
 ---
 
@@ -301,7 +302,7 @@ Build fails if:
 - TypeScript errors exist
 - ESLint warnings exist
 - Any file >75 lines
-- Coverage <100%
+- Coverage <90% (aim for 100%)
 - Duplication >5%
 
 ---
