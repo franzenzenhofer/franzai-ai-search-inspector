@@ -1,25 +1,11 @@
 import { memo } from "react";
 import type { UiStreamRow } from "@/types";
+import { SummaryCell } from "./StreamTableSummary";
 
 interface StreamTableProps {
   rows: UiStreamRow[];
   selectedIndex: number | null;
   onSelect: (index: number) => void;
-}
-
-function SummaryCell({ row }: { row: UiStreamRow }): JSX.Element {
-  if (row.kind === "sse") {
-    return (
-      <>
-        {row.parsed.summary.deltaEncoding && <span className="badge" title="delta_encoding">delta={row.parsed.summary.deltaEncoding}</span>}{" "}
-        {!!row.parsed.summary.modelSlugs.size && <span className="badge" title="model slug(s)">model: {[...row.parsed.summary.modelSlugs].join(",")}</span>}{" "}
-        {!!row.parsed.summary.requestIds.size && <span className="badge" title="request ids">reqs: {row.parsed.summary.requestIds.size}</span>}{" "}
-        events: {row.events.length}
-      </>
-    );
-  }
-  if (row.kind === "jsonl") return <>lines: {row.parsed.items.length}</>;
-  return <>{row.note}</>;
 }
 
 function TypeBadge({ kind }: { kind: "sse" | "jsonl" | "other" }): JSX.Element {
