@@ -3,6 +3,7 @@ import type { ExtractedData } from "@/lib/searchExtract";
 import { SseView } from "./SseView";
 import { SearchResults } from "./SearchResults";
 import { SearchQueries } from "./SearchQueries";
+import { MetadataDisplay } from "./MetadataDisplay";
 
 interface EventDetailsProps {
   stream: UiStreamRow | null;
@@ -37,10 +38,11 @@ function JsonlSearchData({ stream }: { stream: Extract<UiStreamRow, { kind: "jso
   const extracted = getExtracted(stream);
   if (!extracted) return <></>;
   return (
-    <>
-      {extracted.searchQueries.length > 0 && <><h4>Search Queries</h4><SearchQueries queries={extracted.searchQueries} /></>}
-      {extracted.searchResults.length > 0 && <><h4>Search Results</h4><SearchResults groups={extracted.searchResults} /></>}
-    </>
+    <div className="extracted-data">
+      <MetadataDisplay data={extracted} />
+      {extracted.searchQueries.length > 0 && <><h4>🔍 Search Queries ({extracted.searchQueries.length})</h4><SearchQueries queries={extracted.searchQueries} /></>}
+      {extracted.searchResults.length > 0 && <><h4>📄 Search Results ({extracted.searchResults.length} domains)</h4><SearchResults groups={extracted.searchResults} /></>}
+    </div>
   );
 }
 
