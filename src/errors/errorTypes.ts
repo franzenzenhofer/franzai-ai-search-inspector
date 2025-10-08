@@ -2,6 +2,7 @@ export type ErrorSource =
   | "background-worker"
   | "background-handler"
   | "background-listener"
+  | "stream-capture"
   | "parser-sse"
   | "parser-jsonl"
   | "parser-jwt"
