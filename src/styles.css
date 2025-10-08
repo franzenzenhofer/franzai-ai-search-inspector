@@ -11,7 +11,9 @@
 .content-scroll {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--dt-spacing-md);
+  word-wrap: break-word;
 }
 
 .toolbar {
