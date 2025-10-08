@@ -6,6 +6,14 @@ export interface SearchResultEntry {
   snippet: string;
   thumbnail?: string | undefined;
   authority?: number | undefined;
+  favicon?: string | undefined;
+  published_date?: string | undefined;
+  last_updated?: string | undefined;
+  author?: string | undefined;
+  domain?: string | undefined;
+  rank?: number | undefined;
+  score?: number | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface SearchResultGroup {
