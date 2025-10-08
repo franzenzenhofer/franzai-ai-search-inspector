@@ -21,5 +21,14 @@ module.exports = {
     "complexity": ["error", 10],
     "max-depth": ["error", 3]
   },
+  overrides: [
+    {
+      files: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+      rules: {
+        "max-lines": "off",
+        "max-lines-per-function": "off"
+      }
+    }
+  ],
   ignorePatterns: ["dist/**", "*.config.ts"]
 };

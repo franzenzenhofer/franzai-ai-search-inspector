@@ -4,8 +4,8 @@ export interface SearchResultEntry {
   url: string;
   title: string;
   snippet: string;
-  thumbnail?: string;
-  authority?: number;
+  thumbnail?: string | undefined;
+  authority?: number | undefined;
 }
 
 export interface SearchResultGroup {
@@ -16,28 +16,28 @@ export interface SearchResultGroup {
 export interface ContentReference {
   cited_message_idx: number;
   reference_ids: string[];
-  matched_text?: string;
-  url?: string;
+  matched_text?: string | undefined;
+  url?: string | undefined;
 }
 
 export interface SearchQuery {
   query: string;
-  timestamp?: number;
+  timestamp?: number | undefined;
 }
 
 export interface MessageContent {
   content_type: string;
-  parts?: string[];
-  text?: string;
+  parts?: string[] | undefined;
+  text?: string | undefined;
 }
 
 export interface ConversationMessage {
   id: string;
   author: { role: string };
-  content?: MessageContent;
-  create_time?: number;
-  status?: string;
-  metadata?: Record<string, unknown>;
-  children?: string[];
-  parent?: string;
+  content?: MessageContent | undefined;
+  create_time?: number | undefined;
+  status?: string | undefined;
+  metadata?: Record<string, unknown> | undefined;
+  children?: string[] | undefined;
+  parent?: string | undefined;
 }
