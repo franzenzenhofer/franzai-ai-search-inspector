@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { CapturedStream } from "@/types";
 
 interface StreamTableProps {
@@ -6,7 +7,7 @@ interface StreamTableProps {
   selected: CapturedStream | null;
 }
 
-function StreamRow({ stream, onSelect, isSelected }: { stream: CapturedStream; onSelect: () => void; isSelected: boolean }): JSX.Element {
+const StreamRow = memo(function StreamRow({ stream, onSelect, isSelected }: { stream: CapturedStream; onSelect: () => void; isSelected: boolean }): JSX.Element {
   const time = new Date(stream.timestamp).toLocaleTimeString();
   const url = new URL(stream.url).pathname;
   return (
@@ -16,9 +17,9 @@ function StreamRow({ stream, onSelect, isSelected }: { stream: CapturedStream; o
       <td className="cell mono">{stream.requestId}</td>
     </tr>
   );
-}
+});
 
-function TableHeader(): JSX.Element {
+const TableHeader = memo(function TableHeader(): JSX.Element {
   return (
     <thead>
       <tr>
@@ -28,9 +29,9 @@ function TableHeader(): JSX.Element {
       </tr>
     </thead>
   );
-}
+});
 
-function TableBody({ streams, onSelect, selected }: Pick<StreamTableProps, "streams" | "onSelect" | "selected">): JSX.Element {
+const TableBody = memo(function TableBody({ streams, onSelect, selected }: Pick<StreamTableProps, "streams" | "onSelect" | "selected">): JSX.Element {
   return (
     <tbody>
       {streams.map((stream) => (
@@ -43,13 +44,13 @@ function TableBody({ streams, onSelect, selected }: Pick<StreamTableProps, "stre
       ))}
     </tbody>
   );
-}
+});
 
-export function StreamTable(props: StreamTableProps): JSX.Element {
+export const StreamTable = memo(function StreamTable(props: StreamTableProps): JSX.Element {
   return (
     <table className="table">
       <TableHeader />
       <TableBody {...props} />
     </table>
   );
-}
+});
