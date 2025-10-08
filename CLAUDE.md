@@ -1,488 +1,424 @@
-# CLAUDE.md - Chrome SSE Inspector Extension
+# CLAUDE.md
 
-> **I am Claude Code** (CLI) – Not Claude Desktop
-> **Read & Execute** this file on every session start
-
----
-
-## 🎯 PROJECT MISSION
-
-**Chrome Side Panel Extension** for inspecting SSE/JSONL network responses from ChatGPT and similar streaming services.
-
-**Core Principle**: Only real data. No mocks. No fallbacks. Fail fast, loud, early.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ---
 
-## 1. TYPESCRIPT - HARDCORE MODE
+## Project Overview
 
-### Strict Compilation
-```json
-{
-  "strict": true,
-  "noUncheckedIndexedAccess": true,
-  "noFallthroughCasesInSwitch": true,
-  "noImplicitReturns": true,
-  "noUnusedLocals": true,
-  "noUnusedParameters": true,
-  "exactOptionalPropertyTypes": true,
-  "noImplicitOverride": true,
-  "noPropertyAccessFromIndexSignature": true
-}
-```
+**Chrome Side Panel Extension** for inspecting Server-Sent Events (SSE) and JSON Lines (JSONL) network traffic from ChatGPT and similar streaming services.
 
-### Zero Tolerance
-- **0 TypeScript errors** allowed
-- **0 ESLint warnings** allowed
-- **0 any types** (except explicit unknown conversion)
-- **0 @ts-ignore** comments
+**Core Architecture Philosophy**: Only real data. No mocks, no fallbacks, no dummy data. Fail fast, loud, and early.
 
-### Pre-commit Check
+**Tech Stack**: TypeScript + React + Vite + CRXJS (Manifest V3)
+
+---
+
+## Development Commands
+
+### Setup
 ```bash
-tsc --noEmit && eslint . --max-warnings=0
+npm install
 ```
 
----
-
-## 2. LINTING - MAXIMUM ENFORCEMENT
-
-### ESLint Configuration
-```json
-{
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:@typescript-eslint/recommended-requiring-type-checking",
-    "plugin:@typescript-eslint/strict",
-    "prettier"
-  ],
-  "rules": {
-    "@typescript-eslint/no-explicit-any": "error",
-    "@typescript-eslint/explicit-function-return-type": "error",
-    "@typescript-eslint/no-unused-vars": ["error", {"argsIgnorePattern": "^_"}],
-    "max-lines": ["error", {"max": 75}],
-    "complexity": ["error", 10],
-    "max-depth": ["error", 3]
-  }
-}
-```
-
-### Command
+### Development
 ```bash
-npm run lint     # Must pass with 0 warnings
+npm run dev          # Vite dev server with HMR
+npm run build        # Production build to dist/
 ```
 
----
-
-## 3. FILE SIZE LIMIT - STRICT 75 LINES
-
-### Hard Rule
-- **Maximum 75 lines** per code file (`.ts`, `.tsx`)
-- Includes imports, blank lines, everything
-- **Exceptions**: Config files (`tsconfig.json`, `vite.config.ts`)
-
-### Enforcement
-- ESLint `max-lines` rule set to error at 75
-- Build fails if any file exceeds limit
-- Split large files into focused modules
-
-### Strategy
-- Small, focused functions (≤15 lines each)
-- Single Responsibility Principle
-- Extract to modules early and often
-
----
-
-## 4. TESTING - 100% COVERAGE MANDATORY
-
-### Coverage Requirements
-- **100% function coverage** - NO EXCEPTIONS
-- **100% branch coverage** - NO EXCEPTIONS
-- **100% line coverage** - NO EXCEPTIONS
-- **100% statement coverage** - NO EXCEPTIONS
-
-### Test Framework
-```json
-{
-  "test": "vitest run --coverage",
-  "test:watch": "vitest --coverage",
-  "test:ui": "vitest --ui --coverage"
-}
-```
-
-### Coverage Enforcement
-```json
-{
-  "coverage": {
-    "branches": 100,
-    "functions": 100,
-    "lines": 100,
-    "statements": 100,
-    "provider": "v8",
-    "reporter": ["text", "json", "html"],
-    "exclude": ["**/*.config.ts", "**/dist/**"]
-  }
-}
-```
-
-### Test Requirements
-- Every function MUST have tests
-- Every branch MUST be tested
-- Every error path MUST be tested
-- No function without unit test
-- Integration tests for user flows
-- E2E tests for critical paths
-
----
-
-## 5. GIT WORKFLOW - ATOMIC COMMITS
-
-### Mandatory Pattern
+### Quality Gates (all must pass before commit)
 ```bash
-# After EVERY file change:
+npm run typecheck    # TypeScript strict mode (0 errors)
+npm run lint         # ESLint strict (0 warnings)
+npm run test         # Vitest with 100% coverage
+npm run validate     # Run all checks: lint + typecheck + test
+```
+
+### Testing
+```bash
+npm run test         # Run all tests with coverage report
+npm run test:watch   # Watch mode with live coverage
+npm run test:ui      # Vitest UI for debugging tests
+```
+
+### Code Quality
+```bash
+npm run lint         # Check linting (0 warnings allowed)
+npm run lint:fix     # Auto-fix linting issues
+npm run format       # Format with Prettier
+npm run format:check # Check formatting
+```
+
+### Load Extension in Chrome
+1. `npm run build` → creates `dist/` folder
+2. Open `chrome://extensions`
+3. Enable "Developer mode"
+4. Click "Load unpacked" → select `dist/` folder
+
+---
+
+## Architecture
+
+### High-Level Data Flow
+
+```
+Chrome Tab (ChatGPT)
+    ↓ Network Request
+chrome.debugger (CDP)
+    ↓ Response Body Capture
+background.ts (Service Worker)
+    ↓ Filter & Forward
+Side Panel UI (React)
+    ↓ Parse
+lib/sse.ts | lib/jsonl.ts | lib/jwt.ts
+    ↓ Render
+Components (StreamTable, EventDetails)
+```
+
+### Key Architectural Decisions
+
+**1. Chrome Debugger Protocol (CDP) for Network Capture**
+- Uses `chrome.debugger` API to attach to the active tab
+- Captures complete response bodies including SSE streams
+- Only way in MV3 to reliably get streaming response bodies
+- Scoped to single tab, requires user permission
+
+**2. Background Service Worker Pattern**
+- `src/background.ts` handles all CDP communication
+- Captures `Network.responseReceived` and `Network.loadingFinished` events
+- Filters for URLs matching: `/backend-api/conversation`, `process_upload_stream`, etc.
+- Forwards captured data to side panel via `chrome.runtime.sendMessage`
+
+**3. Parser Isolation**
+- Each parser (`sse.ts`, `jsonl.ts`, `jwt.ts`) is pure, stateless
+- Parsers only extract data that explicitly exists in responses
+- No inference, no enrichment, no external calls
+- All parsers have 100% test coverage
+
+**4. Security-First Secrets Handling**
+- JWT tokens are **masked by default** (e.g., `abc123...xyz789`)
+- Only decoded **claims** are shown (iat, exp, conduit_uuid, etc.)
+- Full token visible only when user toggles "Show secrets"
+- Implemented in `lib/jwt.ts` + `SecretToggle.tsx`
+
+---
+
+## Code Organization
+
+### Directory Structure
+```
+src/
+├── background.ts              # MV3 service worker - CDP network capture
+├── types.ts                   # Shared TypeScript types
+├── lib/                       # Pure parsing functions (no React)
+│   ├── sse.ts                 # SSE parser: event/data blocks
+│   ├── jsonl.ts               # JSON Lines parser
+│   ├── jwt.ts                 # JWT claims decoder (token masking)
+│   └── util.ts                # Small helpers (tryParseJson, maskToken, etc.)
+├── sidepanel/                 # React UI
+│   ├── index.html
+│   ├── main.tsx               # React root
+│   ├── App.tsx                # Main app component
+│   └── components/
+│       ├── Controls.tsx       # Start/Stop/Clear/Export buttons
+│       ├── StreamTable.tsx    # List of captured requests
+│       ├── EventDetails.tsx   # Detailed view of selected request
+│       └── SecretToggle.tsx   # Show/hide secrets toggle
+└── styles.css                 # Global styles
+
+tests/
+├── sse.test.ts                # SSE parser tests
+├── jwt.test.ts                # JWT decoder tests
+└── jsonl.test.ts              # JSONL parser tests
+```
+
+### Module Responsibilities
+
+**background.ts**
+- Listens for `startCapture` / `stopCapture` messages from UI
+- Attaches/detaches `chrome.debugger` to active tab
+- Monitors `Network.*` CDP events
+- Filters requests matching target URL patterns
+- Fetches response bodies via `Network.getResponseBody`
+- Sends captured data to side panel
+
+**lib/sse.ts**
+- `parseEventStream(body: string): SseEvent[]` - Parses SSE format
+- `summarize(events: SseEvent[])` - Extracts conversation_id, message_id, model_slug, etc.
+- Handles multi-line `data:` fields (spec allows concatenation with `\n`)
+- Auto-detects JSON in data fields
+
+**lib/jsonl.ts**
+- `parseJsonl(url: string, body: string): ParsedJsonl` - Parses newline-delimited JSON
+- Used for `process_upload_stream` responses
+
+**lib/jwt.ts**
+- `decodeJwtClaims(token: string)` - Decodes JWT header and claims
+- Returns `{ masked: string, header?: unknown, claims?: JwtClaims }`
+- Base64url decoder handles padding
+
+**App.tsx**
+- Manages capture state and row data
+- Listens for messages from background worker
+- Routes captured responses to correct parser based on content-type
+- Handles row selection for detail view
+
+---
+
+## Critical Constraints
+
+### 75-Line File Limit
+Every TypeScript/TSX file MUST be ≤75 lines including imports and blank lines.
+
+**Enforcement**: ESLint rule `max-lines: ["error", {"max": 75}]`
+
+**Strategy**:
+- Functions ≤15 lines each
+- Extract to new module when approaching limit
+- Split components into sub-components
+- No exceptions for source code files
+
+### 100% Test Coverage
+Every function must have unit tests with 100% coverage (branches, functions, lines, statements).
+
+**Enforcement**: Vitest coverage thresholds in `vitest.config.ts`
+```typescript
+coverage: {
+  branches: 100,
+  functions: 100,
+  lines: 100,
+  statements: 100
+}
+```
+
+**Requirements**:
+- Test all code paths
+- Test error handling
+- Test edge cases (empty strings, malformed data, etc.)
+- Mock chrome APIs in tests where needed
+
+### TypeScript Strict Mode
+Zero tolerance policy for type errors.
+
+**Required tsconfig flags**:
+- `strict: true`
+- `noUncheckedIndexedAccess: true`
+- `noFallthroughCasesInSwitch: true`
+- `noImplicitReturns: true`
+- `noUnusedLocals: true`
+- `noUnusedParameters: true`
+
+**No `any` types** except when explicitly converting to `unknown` first.
+
+### Zero ESLint Warnings
+Build fails if any ESLint warnings exist.
+
+**Key rules**:
+- `@typescript-eslint/no-explicit-any: "error"`
+- `@typescript-eslint/explicit-function-return-type: "error"`
+- `complexity: ["error", 10]` - Max cyclomatic complexity
+- `max-depth: ["error", 3]` - Max nesting depth
+
+---
+
+## Git Workflow
+
+### Atomic Commits (MANDATORY)
+After **every single file change**:
+```bash
 git add <file>
 git commit -m "type(scope): description"
 git push
 ```
 
-### Commit Types (Conventional Commits)
-- `feat:` New feature
-- `fix:` Bug fix
-- `refactor:` Code restructuring
-- `test:` Add/update tests
-- `docs:` Documentation
-- `chore:` Build/config changes
-- `perf:` Performance improvement
+**NO batching** multiple files. **NO accumulating** changes.
 
-### Rules
-- **NO batching** multiple file changes
-- **NO accumulating** changes before commit
-- **IMMEDIATE push** after every commit
-- Atomic = One file, one logical change, one commit
-
-### Examples
-```bash
-git add src/lib/sse.ts
-git commit -m "feat(parser): add SSE event stream parser"
-git push
-
-git add tests/sse.test.ts
-git commit -m "test(parser): add SSE parser unit tests"
-git push
-```
+### Commit Format
+Use Conventional Commits:
+- `feat(parser): add SSE event stream parser`
+- `fix(ui): correct token masking logic`
+- `test(jwt): add edge case for malformed tokens`
+- `refactor(types): extract ParsedStream interface`
+- `chore(deps): update vitest to 2.1.4`
 
 ---
 
-## 6. CODE QUALITY - CLEAN/DRY/MODULAR
+## Common Development Tasks
 
-### CLEAN Code Principles
-- **C**lear naming (no abbreviations except standard)
-- **L**oose coupling (low dependencies)
-- **E**asy to understand (self-documenting)
-- **A**ppropriate abstractions (no premature optimization)
-- **N**o duplication (DRY principle)
+### Adding a New Parser
+1. Create `src/lib/newparser.ts` (≤75 lines, pure functions)
+2. Export type-safe parsing function with explicit return type
+3. Create `tests/newparser.test.ts` with 100% coverage
+4. Commit parser and tests separately (atomic commits)
+5. Integrate into `App.tsx` content-type routing
 
-### DRY (Don't Repeat Yourself)
-- **>10% duplication** fails build
-- Extract common logic immediately
-- Shared utilities in `/lib`
-- Reusable components in `/components`
+### Adding a New UI Component
+1. Create `src/sidepanel/components/NewComponent.tsx` (≤75 lines)
+2. Keep props interface minimal (≤3 parameters, use object if more)
+3. Add to parent component
+4. Consider splitting if approaching 75 lines
+5. Atomic commit
 
-### MODULAR Architecture
-```
-src/
-├── lib/           # Pure functions, no side effects
-├── types/         # Type definitions only
-├── components/    # React components (≤75 lines each)
-├── hooks/         # Custom React hooks
-├── utils/         # Utility functions
-└── background.ts  # Service worker (split if >75 lines)
-```
-
-### Function Guidelines
-- **Max 15 lines** per function
-- **Max 3 parameters** (use object for more)
-- **Single responsibility** only
-- **Pure functions** preferred
-- **Explicit return types** always
+### Modifying Background Worker
+1. Read `src/background.ts` first to understand CDP flow
+2. Modify CDP event handlers or filtering logic
+3. Keep session management separate from event handling
+4. Test with `npm run build` + load extension + check DevTools console
+5. Atomic commit
 
 ---
 
-## 7. BUILD PIPELINE - ZERO FAILURES
+## Testing Strategy
 
-### Commands
-```bash
-npm run build      # Vite build + tsc --noEmit
-npm run lint       # ESLint strict mode
-npm run test       # Vitest with 100% coverage
-npm run typecheck  # tsc --noEmit standalone
-```
+### Parser Tests (Critical)
+Every parser must test:
+- Valid input → correct output
+- Empty input
+- Malformed input (invalid format)
+- Edge cases (single event, no events, very long data fields)
+- Type safety (return types match spec)
 
-### Pre-deployment Checklist
-```bash
-#!/bin/bash
-set -e
-npm run lint
-npm run typecheck
-npm run test
-npm run build
-```
+### React Component Tests
+Use Testing Library patterns:
+- Render component
+- Query by role/label (accessibility-first)
+- Simulate user interactions
+- Assert on rendered output
 
-### Pipeline Gates
-- TypeScript errors → **BLOCK**
-- ESLint warnings → **BLOCK**
-- Coverage <100% → **BLOCK**
-- Build errors → **BLOCK**
-
----
-
-## 8. NPM SCRIPTS - STANDARDIZED
-
-```json
-{
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "vitest run --coverage",
-    "test:watch": "vitest --coverage",
-    "test:ui": "vitest --ui",
-    "typecheck": "tsc --noEmit",
-    "predeploy": "npm run lint && npm run typecheck && npm run test && npm run build",
-    "validate": "npm run lint && npm run typecheck && npm run test"
-  }
-}
-```
-
----
-
-## 9. PROJECT INITIALIZATION
-
-### New Project Setup
-```bash
-git init
-gh repo create franzai-ai-search-inspector --public
-gh repo set-default franzai-ai-search-inspector
-git add .
-git commit -m "chore: initial commit"
-git push -u origin main
-```
-
----
-
-## 10. DEVELOPMENT WORKFLOW
-
-### Task Management Protocol
-1. **Research First** - Understand requirements thoroughly
-2. **Create Todo List** - Break down into atomic tasks
-3. **Plan & Design** - Architecture and approach
-4. **Implement** - Write code (≤75 lines per file)
-5. **Write Tests** - 100% coverage for new code
-6. **Lint & Type Check** - Fix all errors/warnings
-7. **Atomic Commit** - Commit + push immediately
-8. **QA Task** - Verify implementation correctness
-9. **Reflect** - Review and optimize
-
-### Every Task Must Have
-- **Priority** tag (P0/P1/P2/P3)
-- **Effort** estimate (XS/S/M/L/XL)
-- **Acceptance Criteria** (clear definition of done)
-- **QA Step** (verification task)
-
----
-
-## 11. ERROR HANDLING
-
-### Principles
-- **Fail fast, loud, early**
-- No silent failures
-- No swallowed errors
-- Explicit error types
-- Detailed error messages
-
-### Pattern
+### Chrome API Mocking
+Mock `chrome.*` APIs in tests:
 ```typescript
-// ❌ BAD
-try {
-  riskyOperation();
-} catch {
-  // Silent failure
-}
-
-// ✅ GOOD
-try {
-  riskyOperation();
-} catch (error) {
-  const err = error instanceof Error ? error : new Error(String(error));
-  logger.error('Operation failed', { error: err, context });
-  throw new AppError('User-friendly message', err);
-}
+global.chrome = {
+  runtime: { sendMessage: vi.fn() },
+  debugger: { attach: vi.fn(), sendCommand: vi.fn() }
+  // ...
+};
 ```
 
 ---
 
-## 12. DEPENDENCIES
+## Debugging
+
+### Extension Debugging
+1. Build extension: `npm run build`
+2. Load unpacked in Chrome
+3. Open side panel
+4. Open DevTools → **inspect service worker** (background.ts logs)
+5. Open DevTools → **inspect side panel** (React component logs)
+6. Check `chrome://extensions` for errors
+
+### Network Capture Issues
+- Verify `chrome.debugger` permission granted
+- Check target URL regex in `background.ts:495`
+- Verify content-type matching in `App.tsx:731`
+- Check CDP protocol version (currently `"1.3"`)
+
+### Build Issues
+- Run `npm run validate` to check all gates
+- Check `tsc --noEmit` for type errors
+- Check `npm run lint` for ESLint issues
+- Verify all tests pass: `npm run test`
+
+---
+
+## Dependencies Philosophy
 
 ### Allowed
-- Core: `react`, `react-dom`, `typescript`, `vite`
-- Build: `@crxjs/vite-plugin`, `@vitejs/plugin-react`
-- Linting: `eslint`, `@typescript-eslint/*`, `prettier`
-- Testing: `vitest`, `@testing-library/react`, `jsdom`
-- Types: `@types/chrome`, `@types/react`, `@types/react-dom`
+- **react**, **react-dom** - UI framework
+- **typescript** - Type safety
+- **vite**, **@crxjs/vite-plugin** - Build tooling
+- **vitest**, **@testing-library/react** - Testing
+- **eslint**, **prettier** - Code quality
+- **@types/chrome** - Chrome extension types
 
 ### Forbidden
-- **No lodash** (use native ES2022)
-- **No moment** (use native Date)
-- **No jQuery** (use native DOM)
-- **No axios** (use native fetch)
-- **No mock libraries** (real data only)
+- ❌ **No lodash** - use native ES2022 methods
+- ❌ **No axios** - use native `fetch` or CDP
+- ❌ **No moment** - use native `Date`
+- ❌ **No mock data libraries** - real data only
+- ❌ **No state management** (Redux, MobX) - React state sufficient
 
 ---
 
-## 13. BROWSER COMPATIBILITY
+## Data Integrity Principles
 
-### Target
-- Chrome/Edge 120+ (Manifest V3)
-- ES2022 syntax
-- Native Web APIs only
-- No polyfills unless critical
+### Only Parse What Exists
+- Extract fields that are **present** in responses
+- No assumptions about missing data
+- No enrichment from external sources
+- No inference about internal model state
 
----
-
-## 14. SECURITY
-
-### Rules
-- Mask tokens by default
-- Show secrets only on explicit toggle
-- No credentials in code
-- No eval or Function constructor
-- CSP compliant
-- Minimal permissions
-
----
-
-## 15. DOCUMENTATION
-
-### Required
-- JSDoc for all public functions
-- Type annotations for all variables
-- README.md with setup instructions
-- CHANGELOG.md for releases
-- Inline comments for complex logic only
-
-### Format
+### Fail Loudly
 ```typescript
-/**
- * Parses Server-Sent Events stream into structured events.
- *
- * @param body - Raw SSE response body
- * @returns Array of parsed SSE events with data and metadata
- * @throws {ParseError} When SSE format is invalid
- */
-export function parseEventStream(body: string): SseEvent[] {
-  // Implementation
+// ❌ BAD - Silent failure
+try { parse(data); } catch { return null; }
+
+// ✅ GOOD - Explicit error
+try {
+  return parse(data);
+} catch (error) {
+  throw new ParseError('Failed to parse SSE', { cause: error });
 }
 ```
 
----
-
-## 16. PERFORMANCE
-
-### Guidelines
-- Minimize bundle size (<500KB)
-- Lazy load when possible
-- Debounce user inputs
-- Memoize expensive computations
-- Profile before optimizing
+### Type Safety Over Runtime Checks
+Prefer TypeScript types to catch errors at compile time rather than runtime validation.
 
 ---
 
-## 17. ACCESSIBILITY
+## Performance Considerations
 
-### Standards
-- Semantic HTML
-- ARIA labels where needed
-- Keyboard navigation
-- Focus management
-- Screen reader compatible
+### Bundle Size Target
+- Total bundle < 500KB
+- Lazy load components if needed
+- Tree-shake unused code
+- No large dependencies
 
----
-
-## 18. DEFINITION OF DONE
-
-### Task Complete When:
-- ✅ Code written (≤75 lines per file)
-- ✅ Tests written (100% coverage)
-- ✅ Lint passes (0 warnings)
-- ✅ Type check passes (0 errors)
-- ✅ Build succeeds
-- ✅ Atomic commit made
-- ✅ Pushed to GitHub
-- ✅ QA verification passed
-- ✅ Documentation updated
+### Memory Management
+- Clear captured rows on user action (Clear button)
+- Limit stored events per request
+- Detach debugger when not capturing
 
 ---
 
-## 19. ROOT CAUSE ANALYSIS
+## Security Guidelines
 
-### 5-7 Whys Technique
-When bugs occur:
-1. Document symptom
-2. Ask "Why?" 5-7 times
-3. Each answer becomes a todo
-4. Fix root cause, not symptom
-5. Add regression test
-6. Update documentation
+### Token Handling
+- **Never log** full JWT tokens
+- **Mask by default** in UI: `abc123...xyz789`
+- Decode claims **client-side only** (no server calls)
+- Show full token only on explicit user toggle
 
----
+### Permissions
+- Request minimal permissions in `manifest.json`
+- `debugger` - required for CDP
+- `sidePanel` - required for UI
+- `storage` - for persisting settings
+- `tabs` - for active tab info
 
-## 20. ENGINEERING MANTRA
-
-> **Quality is culture, not a gate.**
->
-> **Perfect code is:**
-> - Type-safe (0 errors)
-> - Lint-clean (0 warnings)
-> - Fully tested (100% coverage)
-> - Properly sized (≤75 lines)
-> - Atomically committed
-> - Production-ready
+### Content Security Policy
+- No `eval()` or `Function()` constructor
+- No inline scripts in HTML
+- All code in bundled JS files
 
 ---
 
-## 🚫 FORBIDDEN PRACTICES
+## Definition of Done
 
-- ❌ Committing TypeScript errors
-- ❌ Committing ESLint warnings
-- ❌ Untested code
-- ❌ Files >75 lines
-- ❌ Batched commits
-- ❌ Mock/dummy data
-- ❌ Silent error handling
-- ❌ `any` types
-- ❌ `@ts-ignore` comments
-- ❌ Commented-out code
-
----
-
-## ✅ REQUIRED PRACTICES
-
-- ✔️ Read files before editing
-- ✔️ Understand code before changing
-- ✔️ Write tests first (TDD preferred)
-- ✔️ Commit atomically
-- ✔️ Push immediately
-- ✔️ Document public APIs
-- ✔️ Use explicit types
-- ✔️ Handle all errors
-- ✔️ Keep files small
-- ✔️ Stay DRY
+Before committing any file:
+- ✅ TypeScript compiles with 0 errors (`npm run typecheck`)
+- ✅ ESLint passes with 0 warnings (`npm run lint`)
+- ✅ File is ≤75 lines
+- ✅ All functions have tests
+- ✅ Test coverage is 100%
+- ✅ Tests pass (`npm run test`)
+- ✅ Code follows CLEAN/DRY/MODULAR principles
+- ✅ Public functions have JSDoc comments
+- ✅ Atomic commit made with conventional commit message
+- ✅ Pushed to GitHub immediately
 
 ---
 
 **Last Updated**: 2025-10-08
-**Project**: franzai-ai-search-inspector
-**Type**: Chrome Extension (Manifest V3)
-**Stack**: TypeScript + React + Vite + CRXJS
+**Repository**: https://github.com/franzenzenhofer/franzai-ai-search-inspector
