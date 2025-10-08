@@ -21,19 +21,36 @@ export function extractGroup(g: Record<string, unknown>): SearchResultGroup {
   };
 }
 
+function deepFind(obj: unknown, key: string): unknown[] {
+  const results: unknown[] = [];
+  function recurse(current: unknown): void {
+    if (!current || typeof current !== "object") return;
+    const curr = current as Record<string, unknown>;
+    if (Array.isArray(curr[key])) {
+      const arr = curr[key] as unknown[];
+      results.push(...arr);
+    }
+    Object.values(curr).forEach(recurse);
+  }
+  recurse(obj);
+  return results;
+}
+
 export function extractResults(obj: Record<string, unknown>): SearchResultGroup[] {
-  if (!Array.isArray(obj.search_result_groups)) return [];
-  return obj.search_result_groups
+  const groups = deepFind(obj, "search_result_groups");
+  return groups
     .filter((g): g is Record<string, unknown> => typeof g === "object" && g !== null)
     .map(extractGroup);
 }
 
 export function extractQueries(obj: Record<string, unknown>): SearchQuery[] {
-  if (!Array.isArray(obj.search_model_queries)) return [];
-  return obj.search_model_queries
-    .filter((q): q is Record<string, unknown> => typeof q === "object" && q !== null)
+  const smq = deepFind(obj, "search_model_queries");
+  const q = deepFind(obj, "queries");
+  const all = [...smq, ...q];
+  return all
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
     .map((q) => ({
-      query: typeof q.query === "string" ? q.query : "",
+      query: typeof q.query === "string" ? q.query : (typeof q === "string" ? q : ""),
       timestamp: typeof q.timestamp === "number" ? q.timestamp : undefined,
     }));
 }
